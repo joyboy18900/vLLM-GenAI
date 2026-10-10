@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
+
+# Model weights and caches
+models/
+hf-cache/
+*.safetensors
+*.gguf
+
+# Benchmark raw output (commit summaries, not raw dumps)
+bench/results/raw/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
