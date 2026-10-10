@@ -1,0 +1,7 @@
+# Toolchain for local development. Run `mise install` to set up.
+[tools]
+python = "3.12"
+uv = "latest"
+kubectl = "latest"
+k3d = "latest"
+helm = "latest"
