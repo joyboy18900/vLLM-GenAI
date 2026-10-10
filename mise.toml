@@ -1,4 +1,5 @@
 # Toolchain for local development. Run `mise install` to set up.
+# Versions are pinned to exact numbers after the first install in M1.
 [tools]
 python = "3.12"
 uv = "latest"

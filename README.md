@@ -22,7 +22,7 @@ Every design decision and benchmark result goes into the docs, so other people c
 4. Measure everything. Keep raw benchmark data and reproducible scripts in the repository.
 5. Apply normal software engineering practice: tests, CI, pinned versions, and infrastructure as code.
 
-## Architecture
+## Target architecture
 
 ```mermaid
 flowchart LR
@@ -38,6 +38,8 @@ flowchart LR
     prom -.-> dcgm[DCGM exporter]
     grafana[Grafana] --> prom
 ```
+
+This diagram shows the target state. Some parts (for example Ingress with TLS) arrive in later milestones.
 
 Data flow for one voice turn:
 
@@ -73,9 +75,9 @@ Data flow for one voice turn:
 
 | # | Milestone | Status |
 |---|---|---|
-| M0 | Repository setup: license, README, toolchain, CI skeleton | In progress |
-| M1 | vLLM standalone on Mac (vllm-metal) and on RTX 4070 (CUDA). Smoke tests for the OpenAI API. | Not started |
-| M2 | Benchmark harness. Baseline numbers. One-by-one tests of engine settings (prefix caching, chunked prefill, speculative decoding, fp8). Thai quality checks. | Not started |
+| M0 | Repository setup: license, README, toolchain | In progress |
+| M1 | vLLM standalone on Mac (vllm-metal) and on RTX 4070 (CUDA). Check model support first. Smoke tests for the OpenAI API. CI workflow. | Not started |
+| M2 | Benchmark harness. Baseline numbers, including Qwen2.5-3B as a reference point against the T4 results of the reference project. One-by-one tests of engine settings (prefix caching, chunked prefill, speculative decoding, fp8). Thai quality checks. | Not started |
 | M3 | Kubernetes: k3s with GPU on the PC, k3d on the Mac, Kustomize overlays, PVC storage | Not started |
 | M4 | Open WebUI with text chat through vLLM | Not started |
 | M5 | Voice: STT and TTS servers with an OpenAI-compatible API, Thai and English, sentence-level streaming | Not started |
