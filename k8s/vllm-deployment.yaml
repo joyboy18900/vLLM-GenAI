@@ -1,0 +1,106 @@
+# vLLM chat pod. Flags are provisional until ticket 02 measures them on the PC.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vllm-cache
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 30Gi   # model weights (about 9GB) plus compile caches
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-qwen
+  labels:
+    app: vllm
+    variant: bf16
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm
+      variant: bf16
+  strategy:
+    type: Recreate   # one GPU only: never run two vLLM pods at once
+  template:
+    metadata:
+      labels:
+        app: vllm
+        variant: bf16
+    spec:
+      runtimeClassName: nvidia
+      # Kubernetes adds env vars from the "vllm" Service (VLLM_PORT=tcp://...).
+      # They collide with the VLLM_PORT variable of vLLM and crash the engine.
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: vllm
+          image: docker.io/vllm/vllm-openai:v0.28.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - Qwen/Qwen3.5-4B
+            - --served-model-name=Qwen/Qwen3.5-4B
+            - --dtype=bfloat16
+            - --language-model-only   # skip the vision encoder to save VRAM
+            - --gpu-memory-utilization=0.80   # the desktop display also uses this GPU
+            - --max-model-len=4096
+            - --max-num-seqs=4
+            - --enable-prefix-caching
+            - --reasoning-parser=qwen3
+            - '--default-chat-template-kwargs={"enable_thinking": false}'   # voice replies must be fast
+            # Open WebUI sends tool_choice:"auto" on every chat request
+            - --enable-auto-tool-choice
+            - --tool-call-parser=qwen3_coder
+            - --host=0.0.0.0
+            - --port=8000
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: HF_HOME
+              value: /cache/hf
+            - name: VLLM_CACHE_ROOT
+              value: /cache/vllm
+            - name: TRITON_CACHE_DIR
+              value: /cache/triton
+            - name: TORCHINDUCTOR_CACHE_DIR
+              value: /cache/inductor
+            - name: NVIDIA_DISABLE_REQUIRE
+              value: "true"
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 90   # up to 15 minutes: the first start downloads the model
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          volumeMounts:
+            - name: cache
+              mountPath: /cache
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: vllm-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi

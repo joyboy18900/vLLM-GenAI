@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested. Manifest written. Schema checked with kubeconform only. Image pinned to v0.13.0.
+
 - [ ] Open WebUI image pinned to a version
 - [ ] Configured by environment variables to use the `vllm` Service; Ollama off; first boot kept light (no auto model updates, no web search)
 - [ ] ClusterIP Service named `webui`, plus a NodePort for the SSH tunnel path

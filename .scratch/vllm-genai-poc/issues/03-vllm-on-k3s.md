@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested. Manifests written. Flags are provisional until ticket 02. Schema checked with kubeconform only.
+
 - [ ] Deployment uses the flags chosen in ticket 02, requests one GPU, uses the `nvidia` RuntimeClass and the Recreate strategy
 - [ ] Service links disabled on the pod (prevents the `VLLM_PORT` collision)
 - [ ] Model and compile caches on a PersistentVolumeClaim (k3s local-path), so a restart does not download again

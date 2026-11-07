@@ -52,3 +52,65 @@ Expected: JSON with a `text` field that contains "hello world". Case can differ.
 `faster-whisper` 1.2.1 fails with `open() got an unexpected keyword argument
 'metadata_errors'` when `av` is newer than 15.x. The file `speech/stt/requirements.txt`
 pins `av==15.1.0` for this reason.
+
+## vLLM on k3s
+
+Status: written, untested. The flags in `k8s/vllm-deployment.yaml` are provisional.
+Ticket 02 must measure them on the PC first. Then update the file.
+
+Sources for the flags: the Qwen3.5-4B model card (reasoning parser `qwen3`, tool parser
+`qwen3_coder`, `--language-model-only`) and the vLLM docs (`--default-chat-template-kwargs`).
+
+### Deploy
+
+```bash
+docker pull vllm/vllm-openai:v0.28.0
+docker save vllm/vllm-openai:v0.28.0 | sudo k3s ctr images import -
+kubectl apply -f k8s/vllm-deployment.yaml -f k8s/vllm-service.yaml
+kubectl rollout status deploy/vllm-qwen --timeout=20m
+```
+
+The first start downloads the model to the `vllm-cache` PVC.
+
+### Check
+
+Chat completion from a pod in the cluster:
+
+```bash
+kubectl run chat --rm -i --restart=Never --image=curlimages/curl --command -- \
+  curl -s http://vllm:8000/v1/chat/completions -H "Content-Type: application/json" \
+  -d '{"model":"Qwen/Qwen3.5-4B","messages":[{"role":"user","content":"Say hi"}]}'
+```
+
+Expected: JSON with a non-empty `choices[0].message.content`.
+
+Restart check. The pod must come back ready without a new download:
+
+```bash
+kubectl rollout restart deploy/vllm-qwen && kubectl rollout status deploy/vllm-qwen
+kubectl logs deploy/vllm-qwen | grep -i download   # expected: no new download
+```
+
+## Open WebUI text chat
+
+Status: written, untested.
+
+### Deploy
+
+```bash
+kubectl apply -f k8s/open-webui-deployment.yaml
+kubectl rollout status deploy/open-webui
+```
+
+### Open it from the Mac
+
+The web UI listens on NodePort 30080 on the PC. Open an SSH tunnel. The browser then sees
+`localhost`, which keeps the microphone available for voice mode.
+
+```bash
+ssh -L 8080:localhost:30080 <user>@<pc-address>
+```
+
+Open `http://localhost:8080`. Send a message. The answer must stream token by token.
+Restart the pod (`kubectl rollout restart deploy/open-webui`) and check that the chat
+history is still there.
