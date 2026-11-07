@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested on the cluster. The summary and quality scripts ran against fake data on a Mac. The `vllm bench serve` flags were read from the v0.28.0 source. No baseline numbers exist yet.
+
 - [ ] Workloads: random input/output (engine only), real chat text, shared long prefix (prefix caching)
 - [ ] Concurrency 1, 8, and 16, with warmup and a fixed seed
 - [ ] Fixed quality prompt set (English and Thai) checked at temperature 0

@@ -298,3 +298,22 @@ On the Mac, add one line to `/etc/hosts` (needs `sudo`). Use the address of the 
    certificate warning.
 2. Open the voice call screen at `https://webui.genai.test`. The browser must let you use the
    microphone. Say a sentence and listen for the answer. No SSH tunnel is needed now.
+
+## Benchmark harness
+
+Status: the Python scripts ran against a fake server and fake data on a Mac (logic only).
+`bench/run.sh` is written, untested. It needs the real cluster.
+
+`bench/run.sh <label>` runs `vllm bench serve` inside the vLLM pod for three workloads at
+concurrency 1, 8, and 16: random tokens (engine only), real chat text, and a long shared prefix
+(prefix caching). It uses a fixed seed and 3 warmup requests. The flags come from the vLLM v0.28.0
+source. Raw JSON goes to `bench/results/<label>/`.
+
+```bash
+bench/run.sh baseline
+python3 bench/summarize.py baseline                # table, saved as summary.md
+kubectl port-forward svc/vllm 8000:8000 &          # for the quality check
+python3 bench/quality_check.py --label baseline    # 14 English and Thai prompts at temperature 0
+```
+
+Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, and flags.
