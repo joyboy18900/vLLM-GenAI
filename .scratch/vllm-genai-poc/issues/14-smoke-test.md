@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested on the cluster. The pass and fail logic ran with a fake `curl` on a Mac. The script is in `bench/smoke_test.sh` (no new top-level folder).
+
 - [ ] vLLM chat completion returns a non-empty answer
 - [ ] TTS to STT round trip returns "hello world"
 - [ ] Open WebUI and Grafana answer over HTTPS through the Ingress

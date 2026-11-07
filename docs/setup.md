@@ -317,3 +317,23 @@ python3 bench/quality_check.py --label baseline    # 14 English and Thai prompts
 ```
 
 Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, and flags.
+
+## Full smoke test
+
+Status: the pass and fail logic ran on a Mac with a fake `curl` (all pass gives exit 0, a wrong
+answer gives exit 1). `shellcheck` shows no real warning. The real run is untested.
+
+```bash
+sh bench/smoke_test.sh <pc-address>              # CA path default: ~/.genai-certs/ca.crt
+```
+
+It takes about one minute and prints `PASS` or `FAIL` for each check:
+
+1. vLLM chat completion returns a non-empty answer.
+2. TTS to STT round trip returns "hello world".
+3. Prometheus reports the targets `vllm`, `stt`, `tts`, `dcgm`, `node-exporter`, and `kube-state-metrics` as up.
+4. Loki and Alertmanager are ready.
+5. Open WebUI and Grafana answer over HTTPS through the Ingress.
+
+The first four groups run in a temporary pod (`curlimages/curl`), because the Services are
+ClusterIP only. The HTTPS checks run on the Mac. The exit code is 1 if any check fails.
