@@ -136,3 +136,46 @@ Status: written, untested. The audio settings are environment variables in
    `AUDIO_TTS_SPLIT_ON` to `paragraphs`, apply the file again, and write the change here.
 5. Measure the time from the end of your speech to the first audio. Write the number in
    `docs/benchmarks.md`.
+
+## Core monitoring
+
+Status: written, untested. Checked offline: `kubeconform` on the manifests, `promtool check config`
+on the Prometheus config, and `promtool check rules` on all 36 dashboard queries (syntax only).
+
+The stack runs in the `monitoring` namespace: Prometheus, Grafana, DCGM exporter, Node
+Exporter, and kube-state-metrics. The dashboard comes from code: `bench/gen_dash.py`.
+
+### Deploy
+
+Create the Grafana admin password as a Secret first. Choose your own password. It never
+goes into the repository.
+
+```bash
+kubectl apply -f k8s/monitoring/00-namespace.yaml
+kubectl -n monitoring create secret generic grafana-admin --from-literal=admin-password='<your password>'
+kubectl apply -f k8s/monitoring/
+kubectl -n monitoring rollout status deploy/prometheus deploy/grafana deploy/kube-state-metrics
+kubectl -n monitoring rollout status ds/dcgm-exporter ds/node-exporter
+```
+
+### Change the dashboard
+
+```bash
+python3 bench/gen_dash.py > k8s/monitoring/31-dashboard-serving.yaml
+# raise the checksum/dashboard value in k8s/monitoring/30-grafana.yaml
+kubectl apply -f k8s/monitoring/31-dashboard-serving.yaml -f k8s/monitoring/30-grafana.yaml
+```
+
+### Check
+
+1. Targets. Open an SSH tunnel and look at Prometheus:
+   `kubectl -n monitoring port-forward svc/prometheus 9090:9090`, then open
+   `http://localhost:9090/targets`. These jobs must be up: `prometheus`, `vllm`, `dcgm`,
+   `node-exporter`, `kube-state-metrics`, `speech`.
+2. Grafana. Open an SSH tunnel to the NodePort:
+   `ssh -L 3000:localhost:30300 <user>@<pc-address>`. Open `http://localhost:3000` and log
+   in as `admin` with your password. There is no anonymous access.
+3. Open the dashboard "vLLM Serving - SLO, KV cache, GPU". Send a few chat requests. The
+   panels for throughput, TTFT, and running requests must move.
+4. If a vLLM panel stays empty, open `http://<vllm pod>:8000/metrics` and compare the metric
+   names with `bench/gen_dash.py`. The names come from the vLLM v0.28.0 source.

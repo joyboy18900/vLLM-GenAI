@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested. Manifests, dashboard generator, and runbook written. Offline checks only (kubeconform, promtool). Metric names read from vLLM v0.28.0 source, not seen on a live /metrics.
+
 - [ ] Monitoring namespace with Prometheus, Grafana, DCGM exporter, Node Exporter, and kube-state-metrics, all images pinned
 - [ ] DCGM exporter reads GPU metrics without a GPU request
 - [ ] Prometheus scrapes vLLM, DCGM, Node Exporter, kube-state-metrics, and itself; all targets up

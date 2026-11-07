@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** `/metrics` on both servers tested in Docker on a Mac. The Prometheus scrape and the dashboard row are written with ticket 07, untested.
+**Test status:** `/metrics` on both servers tested in Docker on a Mac. The Prometheus `speech` job and the dashboard speech row are written in ticket 07 files, untested.
 
 - [x] STT and TTS expose request count and latency histograms on `/metrics`
 - [ ] Prometheus scrapes both; targets up
