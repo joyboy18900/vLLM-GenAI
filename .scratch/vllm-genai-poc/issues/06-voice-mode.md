@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested. Environment variables and runbook steps are in place. No box is ticked: every item needs the browser on the real cluster.
+
 - [ ] Open WebUI audio settings point to the `stt` and `tts` Services through environment variables
 - [ ] Sentence-level streaming of TTS turned on
 - [ ] Voice call works in the browser through the SSH tunnel (`localhost`, so the microphone is allowed)

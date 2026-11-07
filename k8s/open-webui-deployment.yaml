@@ -73,6 +73,33 @@ spec:
               value: http://vllm:8000/v1
             - name: OPENAI_API_KEY
               value: sk-nokey
+            # speech to text: the stt Service
+            - name: AUDIO_STT_ENGINE
+              value: openai
+            - name: AUDIO_STT_OPENAI_API_BASE_URL
+              value: http://stt:8000/v1
+            - name: AUDIO_STT_OPENAI_API_KEY
+              value: sk-nokey
+            - name: AUDIO_STT_MODEL
+              value: small.en
+            # text to speech: the tts Service
+            - name: AUDIO_TTS_ENGINE
+              value: openai
+            - name: AUDIO_TTS_OPENAI_API_BASE_URL
+              value: http://tts:8000/v1
+            - name: AUDIO_TTS_OPENAI_API_KEY
+              value: sk-nokey
+            - name: AUDIO_TTS_MODEL
+              value: piper
+            - name: AUDIO_TTS_VOICE
+              value: en_US-lessac-medium
+            # Sentence streaming: in call mode Open WebUI cuts the reply at
+            # punctuation and sends one TTS request per sentence while the model
+            # still writes. This needs PIPER_SENTENCE_SILENCE=0 and one Piper
+            # process at a time on the tts server. If sentences overlap or
+            # stutter, change this value to "paragraphs" and record it in docs/setup.md.
+            - name: AUDIO_TTS_SPLIT_ON
+              value: punctuation
             # keep the first start light: no model updates, no web search
             - name: RAG_EMBEDDING_MODEL_AUTO_UPDATE
               value: "false"

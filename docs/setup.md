@@ -114,3 +114,21 @@ ssh -L 8080:localhost:30080 <user>@<pc-address>
 Open `http://localhost:8080`. Send a message. The answer must stream token by token.
 Restart the pod (`kubectl rollout restart deploy/open-webui`) and check that the chat
 history is still there.
+
+## Voice mode
+
+Status: written, untested. The audio settings are environment variables in
+`k8s/open-webui-deployment.yaml`. They point to the `stt` and `tts` Services.
+`AUDIO_TTS_SPLIT_ON=punctuation` turns on sentence streaming.
+
+### Check
+
+1. Open the web UI through the SSH tunnel (`http://localhost:8080`). The microphone works
+   on `localhost`. It does not work on plain HTTP from another address.
+2. In the chat, click the headphone icon (voice call). Allow the microphone.
+3. Say a short English sentence. You must hear the answer. The first sentence must start
+   before the model finishes the rest.
+4. Listen for overlap or stutter between sentences. If you hear it, set
+   `AUDIO_TTS_SPLIT_ON` to `paragraphs`, apply the file again, and write the change here.
+5. Measure the time from the end of your speech to the first audio. Write the number in
+   `docs/benchmarks.md`.
