@@ -19,6 +19,11 @@ data:
         isDefault: true
         jsonData:
           timeInterval: 10s
+      - name: Loki
+        type: loki
+        uid: loki
+        access: proxy
+        url: http://loki.monitoring.svc.cluster.local:3100
   dashboards.yaml: |
     apiVersion: 1
     providers:

@@ -179,3 +179,27 @@ kubectl apply -f k8s/monitoring/31-dashboard-serving.yaml -f k8s/monitoring/30-g
    panels for throughput, TTFT, and running requests must move.
 4. If a vLLM panel stays empty, open `http://<vllm pod>:8000/metrics` and compare the metric
    names with `bench/gen_dash.py`. The names come from the vLLM v0.28.0 source.
+
+## Logs with Loki
+
+Status: written, untested. Checked offline: `kubeconform`, `loki -verify-config`, and
+`alloy fmt` (syntax only).
+
+Loki stores logs on a PVC for 7 days. Grafana Alloy reads the logs of all pods through the
+Kubernetes API and sends them to Loki. Grafana gets Loki as a data source from the
+provisioning file.
+
+### Deploy
+
+```bash
+kubectl apply -f k8s/monitoring/40-loki.yaml -f k8s/monitoring/41-alloy.yaml
+kubectl apply -f k8s/monitoring/30-grafana.yaml
+kubectl -n monitoring rollout restart deploy/grafana
+kubectl -n monitoring rollout status deploy/loki deploy/alloy deploy/grafana
+```
+
+### Check
+
+1. In Grafana, open Explore and choose the data source "Loki".
+2. Run the query `{app="vllm"}`. You must see recent log lines of the vLLM pod.
+3. Run `{app="stt"}`, `{app="tts"}`, and `{app="open-webui"}`. Each one must return lines.
