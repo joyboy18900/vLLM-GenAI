@@ -1,0 +1,16 @@
+[
+  {"id": "en-math", "lang": "en", "prompt": "What is 17 plus 25? Answer with the number only.", "expect": ["42"]},
+  {"id": "en-capital-fr", "lang": "en", "prompt": "What is the capital of France? Answer with one word.", "expect": ["Paris"]},
+  {"id": "en-capital-jp", "lang": "en", "prompt": "What is the capital of Japan? Answer with one word.", "expect": ["Tokyo"]},
+  {"id": "en-opposite", "lang": "en", "prompt": "What is the opposite of hot? Answer with one word.", "expect": ["cold"]},
+  {"id": "en-days", "lang": "en", "prompt": "How many days are in a week? Answer with the number only.", "expect": ["7", "seven"]},
+  {"id": "en-color", "lang": "en", "prompt": "What color do you get when you mix blue and yellow? Answer with one word.", "expect": ["green"]},
+  {"id": "en-planet", "lang": "en", "prompt": "Which planet is known as the Red Planet? Answer with one word.", "expect": ["Mars"]},
+  {"id": "en-water", "lang": "en", "prompt": "What is the chemical symbol for water? Answer with the symbol only.", "expect": ["H2O", "H₂O"]},
+  {"id": "th-capital", "lang": "th", "prompt": "เมืองหลวงของประเทศไทยคืออะไร ตอบสั้นๆ", "expect": ["กรุงเทพ"]},
+  {"id": "th-math", "lang": "th", "prompt": "ห้าบวกเจ็ดเท่ากับเท่าไร ตอบเป็นตัวเลขเท่านั้น", "expect": ["12", "สิบสอง"]},
+  {"id": "th-days", "lang": "th", "prompt": "หนึ่งสัปดาห์มีกี่วัน ตอบเป็นตัวเลขเท่านั้น", "expect": ["7", "เจ็ด"]},
+  {"id": "th-color", "lang": "th", "prompt": "ท้องฟ้าตอนกลางวันที่แจ่มใสมีสีอะไร ตอบสั้นๆ", "expect": ["ฟ้า", "น้ำเงิน"]},
+  {"id": "th-fruit", "lang": "th", "prompt": "ผลไม้สีเหลืองที่ลิงชอบกินคืออะไร ตอบสั้นๆ", "expect": ["กล้วย"]},
+  {"id": "th-opposite", "lang": "th", "prompt": "คำตรงข้ามของคำว่า ร้อน คืออะไร ตอบหนึ่งคำ", "expect": ["เย็น", "หนาว"]}
+]

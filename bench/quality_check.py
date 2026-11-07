@@ -43,7 +43,7 @@ def main():
     ap.add_argument("--timeout", type=float, default=120)
     args = ap.parse_args()
 
-    prompts = json.loads((HERE / "data" / "quality_prompts.json").read_text())
+    prompts = json.loads((HERE / "prompts" / "quality_prompts.json").read_text())
     rows = []
     for item in prompts:
         answer = ask(args.base_url, args.model, item["prompt"], args.timeout)

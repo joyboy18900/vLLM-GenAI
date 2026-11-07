@@ -23,7 +23,7 @@ REMOTE="/tmp/bench/$LABEL"
 
 echo "pod: $POD  label: $LABEL"
 kubectl exec "$POD" -- mkdir -p "$REMOTE" /tmp/bench-data
-kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/chat_prompts.jsonl' < "$HERE/data/chat_prompts.jsonl"
+kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/chat_prompts.jsonl' < "$HERE/prompts/chat_prompts.jsonl"
 
 bench() { # name, then the dataset flags
   local name="$1"; shift
