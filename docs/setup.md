@@ -1,8 +1,15 @@
 # Setup runbook
 
-Each section lists the steps for one part of the stack. A step is "tested" only
-when someone ran it on the target machine. Sections marked "written, untested"
-did not run on the PC yet.
+This runbook sets up the whole system on one machine, in order. Each section has the steps and
+a check command with the expected result.
+
+**Test status:** written, not tested on a machine yet. Parts that ran on a Mac are named in
+their section (the STT and TTS servers, the metrics routes, the certificate commands, and the
+scripts that run on the Mac). After the first full run on the local PC, replace this paragraph
+with "Tested on the local PC" and fill the PC spec table in the first section.
+
+Order: PC as a GPU node, vLLM standalone, speech servers, vLLM on k3s, Open WebUI, voice mode,
+monitoring, logs, alerts, HTTPS, benchmarks, levers, smoke test. Then "If you run on EC2".
 
 ## PC as a GPU node
 
@@ -478,26 +485,6 @@ python3 bench/quality_check.py --label baseline    # 14 English and Thai prompts
 
 Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, and flags.
 
-## Full smoke test
-
-Status: the pass and fail logic ran on a Mac with a fake `curl` (all pass gives exit 0, a wrong
-answer gives exit 1). `shellcheck` shows no real warning. The real run is untested.
-
-```bash
-sh bench/smoke_test.sh <pc-address>              # CA path default: ~/.genai-certs/ca.crt
-```
-
-It takes about one minute and prints `PASS` or `FAIL` for each check:
-
-1. vLLM chat completion returns a non-empty answer.
-2. TTS to STT round trip returns "hello world".
-3. Prometheus reports the targets `vllm`, `stt`, `tts`, `dcgm`, `node-exporter`, and `kube-state-metrics` as up.
-4. Loki and Alertmanager are ready.
-5. Open WebUI and Grafana answer over HTTPS through the Ingress.
-
-The first four groups run in a temporary pod (`curlimages/curl`), because the Services are
-ClusterIP only. The HTTPS checks run on the Mac. The exit code is 1 if any check fails.
-
 ## Optimization levers
 
 Status: `bench/levers.py` builds the argument list of every lever (checked offline). The
@@ -525,3 +512,60 @@ quality check gives the same answers as the baseline.
 
 Choose the best lossless combination. Write the reasons in `docs/benchmarks.md`. Then put the
 final flags in `k8s/vllm-deployment.yaml`, apply it, and run `bench/smoke_test.sh`.
+
+## Full smoke test
+
+Status: the pass and fail logic ran on a Mac with a fake `curl` (all pass gives exit 0, a wrong
+answer gives exit 1). `shellcheck` shows no real warning. The real run is untested.
+
+```bash
+sh bench/smoke_test.sh <pc-address>              # CA path default: ~/.genai-certs/ca.crt
+```
+
+It takes about one minute and prints `PASS` or `FAIL` for each check:
+
+1. vLLM chat completion returns a non-empty answer.
+2. TTS to STT round trip returns "hello world".
+3. Prometheus reports the targets `vllm`, `stt`, `tts`, `dcgm`, `node-exporter`, and `kube-state-metrics` as up.
+4. Loki and Alertmanager are ready.
+5. Open WebUI and Grafana answer over HTTPS through the Ingress. On EC2 without the Ingress, run `sh bench/smoke_test.sh --no-https` to skip this check.
+
+The first four groups run in a temporary pod (`curlimages/curl`), because the Services are
+ClusterIP only. The HTTPS checks run on the Mac. The exit code is 1 if any check fails.
+
+## If you run on EC2
+
+The local PC is the main machine. You can run the same stack on a rented GPU machine. The steps
+in this runbook stay the same. Check these differences first.
+
+### Differences to check
+
+| Topic | What to check |
+|---|---|
+| fp8 and bf16 | A GPU older than Ada has no fp8. A GPU older than Ampere has no bf16. On such a GPU use `--dtype float16` and do not use the fp8 levers. |
+| Model support | Qwen3.5 uses a layer type that has known problems on Turing GPUs (the T4 family). If vLLM cannot start the model, use Qwen2.5-3B-Instruct. See the section "vLLM standalone on the PC". |
+| VRAM | The size is different. Calculate the VRAM budget again and set `--gpu-memory-utilization` and `--max-model-len` for it. No desktop display uses the GPU, so more VRAM is free. |
+| Quota | A new AWS account has a quota of zero for GPU instances. Ask for the quota "Running On-Demand G and VT instances" in the region you use. The quota counts vCPU. Wait for the support case to close. |
+| Cost | You pay for each hour. Set an AWS Budget alert before the first launch. Stop the machine when you do not use it. |
+| Microphone | The browser blocks the microphone on plain HTTP. Open the web UI through an SSH tunnel (it is then `localhost`) or through HTTPS. |
+
+### Steps
+
+1. **Budget.** Create a monthly cost budget with email alerts.
+2. **Quota.** Make the quota request. Check the region name in the top right of the console.
+3. **SSH key.** Make a key on your computer and import the public key in EC2, section "Key
+   pairs", in the same region. Never put the private key in the repository.
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/vllm-genai -C "vllm-genai-ec2"
+   ```
+4. **Launch.** Choose an Ubuntu LTS image and a GPU instance that fits the table above. Use at
+   least 100 GB of disk (model, images, and caches). Let SSH in from your own address only.
+5. **Install.** Connect with `ssh -i ~/.ssh/vllm-genai ubuntu@<public-address>`. Follow the
+   sections from "PC as a GPU node" to "Alerts with Alertmanager". Skip "Ingress with HTTPS".
+6. **Open the pages** through an SSH tunnel:
+   ```bash
+   ssh -i ~/.ssh/vllm-genai -L 8080:localhost:30080 -L 3000:localhost:30300 ubuntu@<public-address>
+   ```
+   Open `http://localhost:8080` (web UI) and `http://localhost:3000` (Grafana).
+7. **Stop.** Use "Stop instance" when you finish. The disk stays and costs a small amount. Use
+   "Terminate" only when you want to delete everything. Deploy again with the same files.

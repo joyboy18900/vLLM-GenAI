@@ -2,6 +2,7 @@
 # Full smoke test. Prints PASS or FAIL for each check. Exit code is 1 if any check fails.
 #
 #   sh bench/smoke_test.sh <pc-address> [path to ca.crt]
+#   sh bench/smoke_test.sh --no-https           (for example on EC2, without the Ingress)
 #
 # Part 1 runs in a temporary pod, because most Services are ClusterIP only.
 # Part 2 runs on the Mac and calls the Ingress over HTTPS.
@@ -57,8 +58,12 @@ if [ "${1:-}" = "--in-cluster" ]; then
 fi
 
 # ---------------------------------------------------------------- part 2 (on the Mac)
-PC="${1:?usage: sh bench/smoke_test.sh <pc-address> [ca.crt]}"
-CA="${2:-$HOME/.genai-certs/ca.crt}"
+HTTPS=1
+if [ "${1:-}" = "--no-https" ]; then HTTPS=0; fi
+if [ "$HTTPS" -eq 1 ]; then
+  PC="${1:?usage: sh bench/smoke_test.sh <pc-address> [ca.crt] | --no-https}"
+  CA="${2:-$HOME/.genai-certs/ca.crt}"
+fi
 
 https_ok() { # host, path
   curl -sf -m 15 --cacert "$CA" --resolve "$1:443:$PC" -o /dev/null "https://$1$2"
@@ -71,9 +76,11 @@ echo "$OUT" | grep -E '^(PASS|FAIL)'
 # kubectl run may not pass on the exit code of the pod, so read the text.
 if echo "$OUT" | grep -q '^FAIL' || ! echo "$OUT" | grep -q '^PASS'; then FAILED=1; fi
 
-echo "== over HTTPS through the Ingress =="
-check "Open WebUI answers over HTTPS" https_ok webui.genai.test /health
-check "Grafana answers over HTTPS" https_ok grafana.genai.test /api/health
+if [ "$HTTPS" -eq 1 ]; then
+  echo "== over HTTPS through the Ingress =="
+  check "Open WebUI answers over HTTPS" https_ok webui.genai.test /health
+  check "Grafana answers over HTTPS" https_ok grafana.genai.test /api/health
+fi
 
 if [ "$FAILED" -eq 0 ]; then echo "ALL CHECKS PASSED"; else echo "SOME CHECKS FAILED"; fi
 exit "$FAILED"
