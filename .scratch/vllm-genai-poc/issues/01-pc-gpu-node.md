@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested. The manifests pass kubeconform and the image tags exist. The PC runs Windows now: install Ubuntu again first. No box is ticked.
+
 Notes:
 - The agent works from the Mac. The user runs the commands that need `sudo` on the PC, or gives the agent SSH access first.
 - Record the PC spec (CPU, RAM, GPU, disk, OS version, driver version) in the setup runbook.

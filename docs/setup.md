@@ -4,6 +4,91 @@ Each section lists the steps for one part of the stack. A step is "tested" only
 when someone ran it on the target machine. Sections marked "written, untested"
 did not run on the PC yet.
 
+## PC as a GPU node
+
+Status: written, untested. The PC runs Windows now. Install Ubuntu again before you start. You run
+the commands that need `sudo` on the PC yourself.
+
+### PC spec
+
+Fill this table on the PC. Run the command in the second column.
+
+| Item | Command | Value |
+|---|---|---|
+| CPU | `lscpu \| grep "Model name"` | to fill |
+| RAM | `free -h` | to fill |
+| GPU and VRAM | `nvidia-smi --query-gpu=name,memory.total --format=csv` | to fill |
+| Disk | `lsblk -o NAME,SIZE,MOUNTPOINT` | to fill |
+| OS | `lsb_release -d` | to fill |
+| Driver version | `nvidia-smi --query-gpu=driver_version --format=csv,noheader` | to fill |
+
+### 1. NVIDIA driver
+
+The desktop display uses this GPU, so install the normal driver (not the headless server one).
+
+```bash
+sudo ubuntu-drivers devices      # shows the recommended driver
+sudo ubuntu-drivers install
+sudo reboot
+nvidia-smi                       # expected: a table with the RTX 4070 SUPER
+```
+
+### 2. NVIDIA Container Toolkit
+
+Install it before k3s. k3s then finds the NVIDIA runtime by itself.
+Source: the NVIDIA Container Toolkit install guide.
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+nvidia-ctk --version             # expected: a version number
+```
+
+### 3. Docker (to build the speech images)
+
+```bash
+sudo apt-get install -y docker.io
+sudo usermod -aG docker "$USER"  # log out and in again
+docker run --rm hello-world      # expected: "Hello from Docker!"
+```
+
+### 4. k3s (single node)
+
+Write the k3s version you install in this file.
+
+```bash
+curl -sfL https://get.k3s.io | sh -
+sudo k3s kubectl get node        # expected: one node, Ready
+sudo grep -c nvidia /var/lib/rancher/k3s/agent/etc/containerd/config.toml   # expected: 1 or more
+```
+
+Use `kubectl` from the Mac. Copy the config and replace the address:
+
+```bash
+# on the PC
+sudo cat /etc/rancher/k3s/k3s.yaml
+# on the Mac: save it as ~/.kube/genai.yaml and replace 127.0.0.1 with the PC address
+KUBECONFIG=~/.kube/genai.yaml kubectl get node     # expected: one node, Ready
+```
+
+### 5. RuntimeClass and device plugin
+
+```bash
+kubectl apply -f k8s/nvidia-device-plugin.yaml
+kubectl -n kube-system rollout status ds/nvidia-device-plugin-daemonset
+kubectl describe node | grep nvidia.com/gpu     # expected: nvidia.com/gpu: 1
+```
+
+### 6. GPU test pod
+
+```bash
+kubectl apply -f k8s/gpu-test.yaml
+kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/gpu-test --timeout=120s
+kubectl logs gpu-test            # expected: the nvidia-smi table with the RTX 4070 SUPER
+kubectl delete pod gpu-test
+```
+
 ## Speech servers (STT and TTS)
 
 Status: the servers and images were tested on a Mac (Docker, arm64). The k3s
