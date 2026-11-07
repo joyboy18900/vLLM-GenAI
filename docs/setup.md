@@ -242,3 +242,59 @@ kubectl -n monitoring scale deploy/kube-state-metrics --replicas=1
 ```
 
 After a few minutes the alert must resolve.
+
+## Ingress with HTTPS
+
+Status: the certificate commands were run on a Mac and verified with `openssl verify`.
+The Ingress file passes `kubeconform`. The cluster steps are written, untested.
+
+Traefik is the k3s default Ingress controller. The host names are `webui.genai.test` and
+`grafana.genai.test`. The `.test` top-level domain is reserved, so it never points to a real site.
+
+### 1. Make a local certificate authority (on the Mac)
+
+Keep these files outside the repository. The folder `~/.genai-certs` is outside it.
+
+```bash
+mkdir -p ~/.genai-certs && cd ~/.genai-certs
+openssl genrsa -out ca.key 4096
+openssl req -x509 -new -key ca.key -sha256 -days 825 -subj "/CN=genai local CA" -out ca.crt
+openssl genrsa -out tls.key 2048
+openssl req -new -key tls.key -subj "/CN=genai.test" -out tls.csr
+printf "subjectAltName=DNS:webui.genai.test,DNS:grafana.genai.test\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n" > ext.cnf
+openssl x509 -req -in tls.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out tls.crt -days 825 -sha256 -extfile ext.cnf
+openssl verify -CAfile ca.crt tls.crt
+```
+
+### 2. Trust the CA on the Mac
+
+This command needs `sudo`. Run it yourself.
+
+```bash
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ~/.genai-certs/ca.crt
+```
+
+### 3. Put the certificate in the cluster
+
+An Ingress can use a Secret only in its own namespace. Make the same Secret in two namespaces.
+
+```bash
+kubectl -n default create secret tls genai-tls --cert=$HOME/.genai-certs/tls.crt --key=$HOME/.genai-certs/tls.key
+kubectl -n monitoring create secret tls genai-tls --cert=$HOME/.genai-certs/tls.crt --key=$HOME/.genai-certs/tls.key
+kubectl apply -f k8s/ingress/ingress.yaml
+```
+
+### 4. Point the host names to the PC
+
+On the Mac, add one line to `/etc/hosts` (needs `sudo`). Use the address of the PC:
+
+```
+<pc-address> webui.genai.test grafana.genai.test
+```
+
+### Check
+
+1. Open `https://webui.genai.test` and `https://grafana.genai.test`. Both pages must load with no
+   certificate warning.
+2. Open the voice call screen at `https://webui.genai.test`. The browser must let you use the
+   microphone. Say a sentence and listen for the answer. No SSH tunnel is needed now.
