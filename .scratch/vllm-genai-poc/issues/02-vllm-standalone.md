@@ -6,6 +6,8 @@
 
 **Status:** ready-for-agent
 
+**Test status:** written, untested. The runbook has the commands and the fallbacks. Nothing was measured. The VRAM table in CLAUDE.md still shows estimates.
+
 - [ ] vLLM version pinned, Qwen3.5-4B served in bf16 through the OpenAI-compatible API
 - [ ] Thinking mode off by default, tool calling enabled with the correct parser for the model
 - [ ] `curl` to `/v1/models` lists the model, and `curl` to `/v1/chat/completions` returns a non-empty answer (stream and non-stream)

@@ -89,6 +89,81 @@ kubectl logs gpu-test            # expected: the nvidia-smi table with the RTX 4
 kubectl delete pod gpu-test
 ```
 
+## vLLM standalone on the PC
+
+Status: written, untested. The flags are the same provisional flags as in
+`k8s/vllm-deployment.yaml`. This step measures the real numbers and sets the final flags.
+
+This step runs vLLM in Docker, outside Kubernetes, with the image that k3s uses later.
+
+### Prepare Docker for the GPU
+
+```bash
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+docker run --rm --gpus all nvidia/cuda:12.6.3-base-ubuntu24.04 nvidia-smi   # expected: the GPU table
+```
+
+Before you start vLLM, write down the VRAM that the desktop display uses:
+
+```bash
+nvidia-smi --query-gpu=memory.used,memory.total --format=csv   # this is the "desktop display" number
+```
+
+### Start vLLM
+
+```bash
+docker run --rm --gpus all --ipc=host -p 8000:8000 \
+  -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+  -e NVIDIA_DISABLE_REQUIRE=true \
+  vllm/vllm-openai:v0.28.0 Qwen/Qwen3.5-4B \
+  --served-model-name Qwen/Qwen3.5-4B --dtype bfloat16 --language-model-only \
+  --gpu-memory-utilization 0.80 --max-model-len 4096 --max-num-seqs 4 \
+  --reasoning-parser qwen3 --default-chat-template-kwargs '{"enable_thinking": false}' \
+  --enable-auto-tool-choice --tool-call-parser qwen3_coder
+```
+
+The first start downloads the model. Wait for the log line that says the server is ready.
+
+### Check
+
+```bash
+curl -s http://localhost:8000/v1/models        # expected: the model Qwen/Qwen3.5-4B in the list
+curl -s http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
+  -d '{"model":"Qwen/Qwen3.5-4B","messages":[{"role":"user","content":"Say hi"}]}'
+curl -sN http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
+  -d '{"model":"Qwen/Qwen3.5-4B","stream":true,"messages":[{"role":"user","content":"Say hi"}]}'
+```
+
+Expected: a non-empty answer in both calls, and a stream of `data:` lines for the second call.
+Thinking must be off: the answer must not contain a `reasoning` field or a `<think>` block.
+
+### Measure the VRAM
+
+Copy these numbers into `docs/benchmarks.md` (section "VRAM") and into the table in `CLAUDE.md`:
+
+| Number | Where to read it |
+|---|---|
+| Weights | vLLM log: "Model loading took ... GiB" |
+| KV cache size | vLLM log: "GPU KV cache size: ... tokens" |
+| Maximum concurrency | vLLM log: "Maximum concurrency for ... tokens per request" |
+| Total VRAM in use | `nvidia-smi` while vLLM is idle |
+| Desktop display | the number you wrote down before the start |
+
+### If something does not fit
+
+1. If the KV cache is too small, test fp8 weights (`--quantization fp8`) and fp8 KV cache
+   (`--kv-cache-dtype fp8`) one at a time. Record the choice and the reason.
+2. If vLLM v0.28.0 cannot load Qwen3.5-4B, use Qwen2.5-3B-Instruct (the model of the reference
+   project) and write the reason in `docs/benchmarks.md`. Change the model name in
+   `k8s/vllm-deployment.yaml`, `bench/run.sh`, and `bench/quality_check.py`. For Qwen2.5 use
+   `--tool-call-parser hermes` and remove `--reasoning-parser`, `--language-model-only`, and
+   `--default-chat-template-kwargs`.
+
+### Stop
+
+Press `Ctrl-C`. Then run `nvidia-smi`. The GPU memory must be free (only the desktop display remains).
+
 ## Speech servers (STT and TTS)
 
 Status: the servers and images were tested on a Mac (Docker, arm64). The k3s
