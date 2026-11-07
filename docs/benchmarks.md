@@ -33,6 +33,11 @@ python3 bench/quality_check.py --label baseline
 ## Optimization levers (ticket 13)
 
 Not measured yet. One section per lever: latency, throughput, VRAM, and the quality result.
+The levers are: prefix caching, chunked prefill, n-gram speculative decoding, MTP speculative
+decoding, AWQ, fp8 weights, fp8 KV cache, and thinking on or off (TTFT). Run them with
+`bench/levers.py` (see `docs/setup.md`, section "Optimization levers").
+
+Final choice: not made yet. Write the chosen flags and the reasons here.
 
 ## Voice (ticket 06)
 

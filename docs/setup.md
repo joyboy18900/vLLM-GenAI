@@ -497,3 +497,31 @@ It takes about one minute and prints `PASS` or `FAIL` for each check:
 
 The first four groups run in a temporary pod (`curlimages/curl`), because the Services are
 ClusterIP only. The HTTPS checks run on the Mac. The exit code is 1 if any check fails.
+
+## Optimization levers
+
+Status: `bench/levers.py` builds the argument list of every lever (checked offline). The
+patch and the measurements are untested. Nothing is measured.
+
+Each lever changes one thing against the baseline. The baseline in `bench/levers.py` has
+prefix caching and chunked prefill switched off, so their levers show a real difference. If a
+lever is already the default in vLLM v0.28.0 for this model, the result shows no change.
+Write that in `docs/benchmarks.md`.
+
+```bash
+python3 bench/levers.py list
+python3 bench/levers.py apply baseline
+bench/run.sh baseline && python3 bench/quality_check.py --label baseline
+
+# repeat for each lever, for example:
+python3 bench/levers.py apply prefix-caching
+bench/run.sh prefix-caching && python3 bench/quality_check.py --label prefix-caching
+```
+
+Levers: `prefix-caching`, `chunked-prefill`, `spec-ngram`, `spec-mtp`, `awq`
+(`--model <AWQ checkpoint>`), `fp8-weights`, `fp8-kv-cache`, `thinking-on`.
+Read the VRAM of each lever from `nvidia-smi` and the vLLM log. A lever is lossless when the
+quality check gives the same answers as the baseline.
+
+Choose the best lossless combination. Write the reasons in `docs/benchmarks.md`. Then put the
+final flags in `k8s/vllm-deployment.yaml`, apply it, and run `bench/smoke_test.sh`.
