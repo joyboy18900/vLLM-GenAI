@@ -47,6 +47,10 @@ kubectl run rt --rm -i --restart=Never --image=curlimages/curl --command -- sh -
 
 Expected: JSON with a `text` field that contains "hello world". Case can differ.
 
+### Metrics
+
+Both servers expose `/metrics` (`stt_requests_total`, `stt_request_duration_seconds`, `tts_requests_total`, `tts_request_duration_seconds`). Tested in Docker on a Mac.
+
 ### Known problem
 
 `faster-whisper` 1.2.1 fails with `open() got an unexpected keyword argument

@@ -6,7 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] STT and TTS expose request count and latency histograms on `/metrics`
+**Test status:** `/metrics` on both servers tested in Docker on a Mac. The Prometheus scrape and the dashboard row are written with ticket 07, untested.
+
+- [x] STT and TTS expose request count and latency histograms on `/metrics`
 - [ ] Prometheus scrapes both; targets up
 - [ ] Dashboard has a speech row (request rate, p50/p99 latency for transcription and synthesis)
 - [ ] A TTS to STT round trip shows in the panels

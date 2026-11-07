@@ -5,10 +5,12 @@ weights download on first use into HF_HOME, which is a mounted volume.
 """
 import os
 import tempfile
+import time
 
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from faster_whisper import WhisperModel
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
 MODEL_SIZE = os.getenv("WHISPER_MODEL", "small.en")
 DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
@@ -28,7 +30,33 @@ whisper = WhisperModel(
     MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE, cpu_threads=CPU_THREADS
 )
 
+REQUESTS = Counter("stt_requests_total", "Transcription requests", ["status"])
+LATENCY = Histogram(
+    "stt_request_duration_seconds", "Transcription request duration",
+    buckets=(0.1, 0.25, 0.5, 1, 2, 4, 8, 16, 32),
+)
+
 app = FastAPI(title="stt-faster-whisper")
+
+
+@app.middleware("http")
+async def measure(request: Request, call_next):
+    if request.url.path != "/v1/audio/transcriptions":
+        return await call_next(request)
+    start = time.perf_counter()
+    status = "500"
+    try:
+        response = await call_next(request)
+        status = str(response.status_code)
+        return response
+    finally:
+        REQUESTS.labels(status).inc()
+        LATENCY.observe(time.perf_counter() - start)
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/health")

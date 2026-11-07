@@ -7,9 +7,11 @@ import os
 import subprocess
 import sys
 import threading
+import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel
 
 VOICE_PATH = os.getenv("PIPER_VOICE_PATH", "/voices/en_US-lessac-medium.onnx")
@@ -21,7 +23,33 @@ SENTENCE_SILENCE = os.getenv("PIPER_SENTENCE_SILENCE", "0.0")
 MAX_CONCURRENCY = int(os.getenv("PIPER_MAX_CONCURRENCY", "1"))
 _slot = threading.Semaphore(MAX_CONCURRENCY)
 
+REQUESTS = Counter("tts_requests_total", "Speech requests", ["status"])
+LATENCY = Histogram(
+    "tts_request_duration_seconds", "Speech request duration",
+    buckets=(0.1, 0.25, 0.5, 1, 2, 4, 8, 16),
+)
+
 app = FastAPI(title="tts-piper")
+
+
+@app.middleware("http")
+async def measure(request: Request, call_next):
+    if request.url.path != "/v1/audio/speech":
+        return await call_next(request)
+    start = time.perf_counter()
+    status = "500"
+    try:
+        response = await call_next(request)
+        status = str(response.status_code)
+        return response
+    finally:
+        REQUESTS.labels(status).inc()
+        LATENCY.observe(time.perf_counter() - start)
+
+
+@app.get("/metrics")
+def metrics():
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 class SpeechRequest(BaseModel):
