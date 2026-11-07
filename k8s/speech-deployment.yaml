@@ -1,0 +1,165 @@
+# Speech pods (STT and TTS). Always on, CPU only, no GPU request.
+# Images are built before deploy (see docs/setup.md). Models and voices live on PVCs.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: speech-models
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: speech-voices
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stt
+  labels: { app: stt }
+spec:
+  selector: { app: stt }
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tts
+  labels: { app: tts }
+spec:
+  selector: { app: tts }
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stt-faster-whisper
+  labels: { app: stt }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: stt }
+  strategy:
+    type: Recreate   # the PVC is ReadWriteOnce
+  template:
+    metadata:
+      labels: { app: stt }
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: stt
+          image: genai-stt:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: HF_HOME
+              value: /models/hf-cache
+            - name: WHISPER_MODEL
+              value: small.en
+            - name: WHISPER_DEVICE
+              value: cpu
+            - name: WHISPER_COMPUTE_TYPE
+              value: int8
+            - name: WHISPER_BEAM_SIZE
+              value: "1"
+            - name: WHISPER_LANGUAGE
+              value: en
+            - name: WHISPER_CONDITION_ON_PREV
+              value: "0"
+            - name: OMP_NUM_THREADS
+              value: "4"
+          resources:
+            requests: { cpu: "500m", memory: 1Gi }
+            limits: { cpu: "3", memory: 4Gi }
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 60   # up to 10 minutes: the first start downloads the model
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 3
+          volumeMounts:
+            - { name: models, mountPath: /models }
+      volumes:
+        - name: models
+          persistentVolumeClaim: { claimName: speech-models }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tts-piper
+  labels: { app: tts }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: tts }
+  strategy:
+    type: Recreate   # the PVC is ReadWriteOnce
+  template:
+    metadata:
+      labels: { app: tts }
+    spec:
+      enableServiceLinks: false
+      initContainers:
+        - name: fetch-voice
+          image: genai-tts:0.1.0
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "piper.download_voices", "en_US-lessac-medium", "--download-dir", "/voices"]
+          volumeMounts:
+            - { name: voices, mountPath: /voices }
+      containers:
+        - name: tts
+          image: genai-tts:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: PIPER_VOICE_PATH
+              value: /voices/en_US-lessac-medium.onnx
+            - name: PIPER_SENTENCE_SILENCE
+              value: "0.0"
+            - name: PIPER_MAX_CONCURRENCY
+              value: "1"
+          resources:
+            requests: { cpu: "250m", memory: 512Mi }
+            limits: { cpu: "2", memory: 2Gi }
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 30
+            failureThreshold: 3
+          volumeMounts:
+            - { name: voices, mountPath: /voices, readOnly: true }
+      volumes:
+        - name: voices
+          persistentVolumeClaim: { claimName: speech-voices }
