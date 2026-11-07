@@ -203,3 +203,42 @@ kubectl -n monitoring rollout status deploy/loki deploy/alloy deploy/grafana
 1. In Grafana, open Explore and choose the data source "Loki".
 2. Run the query `{app="vllm"}`. You must see recent log lines of the vLLM pod.
 3. Run `{app="stt"}`, `{app="tts"}`, and `{app="open-webui"}`. Each one must return lines.
+
+## Alerts with Alertmanager
+
+Status: written, untested. Checked offline: `kubeconform`, `promtool check config` (it also
+loads the rules), and `amtool check-config`.
+
+Rules are in `k8s/monitoring/50-alert-rules.yaml`: any scrape target down, vLLM preemptions
+above zero, GPU temperature above 85 C, and KV cache usage above 90 percent. Alertmanager
+has no notification channel. Read the alerts in its web page.
+
+### Deploy
+
+```bash
+kubectl apply -f k8s/monitoring/50-alert-rules.yaml -f k8s/monitoring/51-alertmanager.yaml
+kubectl apply -f k8s/monitoring/10-prometheus.yaml
+kubectl -n monitoring rollout restart deploy/prometheus
+kubectl -n monitoring rollout status deploy/alertmanager deploy/prometheus
+```
+
+### Check
+
+Make one alert fire on purpose. Scale `kube-state-metrics` to zero. Use this target
+because it is a fixed target. A pod that Prometheus finds by pod discovery (vLLM, STT, TTS)
+leaves the target list when you scale it to zero, so `up` never becomes 0 for it.
+
+```bash
+kubectl -n monitoring scale deploy/kube-state-metrics --replicas=0
+```
+
+After about 2 minutes, open `http://localhost:9090/alerts` (port-forward `svc/prometheus`).
+`TargetDown` must show as firing. Open Alertmanager with
+`kubectl -n monitoring port-forward svc/alertmanager 9093:9093` and check
+`http://localhost:9093`. The alert must be listed. Then restore it:
+
+```bash
+kubectl -n monitoring scale deploy/kube-state-metrics --replicas=1
+```
+
+After a few minutes the alert must resolve.

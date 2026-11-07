@@ -1,0 +1,46 @@
+# Alert rules as code. Prometheus loads them from /etc/prometheus/rules.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: monitoring
+data:
+  alerts.yml: |
+    groups:
+      - name: genai
+        rules:
+          - alert: TargetDown
+            expr: up == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Scrape target {{ $labels.job }} is down"
+              description: "Prometheus cannot scrape {{ $labels.instance }} (job {{ $labels.job }})."
+
+          - alert: VllmPreemptions
+            expr: sum(increase(vllm:num_preemptions_total[5m])) > 0
+            labels:
+              severity: warning
+            annotations:
+              summary: "vLLM preempted requests"
+              description: "vLLM threw away KV cache and recomputed it. Lower --max-num-seqs or --max-model-len."
+
+          - alert: GpuTooHot
+            expr: DCGM_FI_DEV_GPU_TEMP > 85
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "GPU temperature is above 85 C"
+              description: "GPU {{ $labels.gpu }} is at {{ $value }} C."
+
+          - alert: KvCacheNearFull
+            expr: max(vllm:kv_cache_usage_perc) > 0.9
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "vLLM KV cache is above 90 percent"
+              description: "New requests wait or get preempted when the KV cache is full."

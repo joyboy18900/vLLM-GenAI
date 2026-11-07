@@ -42,6 +42,14 @@ data:
       scrape_interval: 10s
       evaluation_interval: 30s
 
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager.monitoring.svc.cluster.local:9093']
+
     scrape_configs:
       - job_name: prometheus
         static_configs:
@@ -168,10 +176,13 @@ spec:
             failureThreshold: 3
           volumeMounts:
             - { name: config, mountPath: /etc/prometheus }
+            - { name: rules, mountPath: /etc/prometheus/rules }
             - { name: data, mountPath: /prometheus }
       volumes:
         - name: config
           configMap: { name: prometheus-config }
+        - name: rules
+          configMap: { name: prometheus-rules }
         - name: data
           persistentVolumeClaim: { claimName: prometheus-data }
 ---
