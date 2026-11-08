@@ -163,7 +163,7 @@ because their data volume can be used by one pod at a time.
 
 The vLLM, STT, TTS, and Open WebUI pods have three checks on `/health`. Most monitoring pods have only the readiness and liveness checks:
 
-- **Startup.** It gives a slow start, such as a first model download, up to 15 minutes. The other
+- **Startup.** It gives a slow start, such as a first model download, up to 10 minutes. The other
   checks wait until it passes.
 - **Readiness.** If it fails, k3s removes the pod from the Service. No calls reach a pod that is
   not ready.

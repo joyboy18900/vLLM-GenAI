@@ -69,7 +69,7 @@ data:
             regex: "8000"
             action: keep
           - source_labels: [__meta_kubernetes_pod_phase]
-            regex: Running
+            regex: (Running|Unknown)
             action: keep
           - source_labels: [__meta_kubernetes_pod_label_variant]
             target_label: variant
@@ -157,8 +157,8 @@ spec:
           args:
             - --config.file=/etc/prometheus/prometheus.yml
             - --storage.tsdb.path=/prometheus
-            - --storage.tsdb.retention.time=7d
-            - --storage.tsdb.retention.size=8GB
+            - --storage.tsdb.retention.time=3d
+            - --storage.tsdb.retention.size=1GB
             - --web.enable-lifecycle
             - --web.listen-address=0.0.0.0:9090
           ports:
@@ -166,7 +166,7 @@ spec:
               containerPort: 9090
           resources:
             requests: { cpu: "100m", memory: 256Mi }
-            limits: { cpu: "600m", memory: 1Gi }
+            limits: { cpu: "600m", memory: 768Mi }
           readinessProbe:
             httpGet: { path: /-/ready, port: http }
             periodSeconds: 15

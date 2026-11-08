@@ -85,7 +85,7 @@ spec:
             - name: AUDIO_STT_OPENAI_API_KEY
               value: sk-nokey
             - name: AUDIO_STT_MODEL
-              value: small.en
+              value: small
             # text to speech: the tts Service
             - name: AUDIO_TTS_ENGINE
               value: openai

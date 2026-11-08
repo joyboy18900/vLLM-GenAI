@@ -57,7 +57,7 @@ spec:
   selector:
     matchLabels: { app: stt }
   strategy:
-    type: Recreate   # the PVC is ReadWriteOnce
+    type: RollingUpdate
   template:
     metadata:
       labels: { app: stt }
@@ -117,7 +117,7 @@ spec:
   selector:
     matchLabels: { app: tts }
   strategy:
-    type: Recreate   # the PVC is ReadWriteOnce
+    type: RollingUpdate
   template:
     metadata:
       labels: { app: tts }

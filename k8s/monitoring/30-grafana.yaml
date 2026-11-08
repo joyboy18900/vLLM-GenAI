@@ -98,7 +98,7 @@ spec:
               containerPort: 3000
           resources:
             requests: { cpu: "50m", memory: 128Mi }
-            limits: { cpu: "400m", memory: 512Mi }
+            limits: { cpu: "400m", memory: 384Mi }
           readinessProbe:
             httpGet: { path: /api/health, port: http }
             periodSeconds: 15

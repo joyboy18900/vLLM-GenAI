@@ -69,6 +69,8 @@ spec:
               value: /cache/triton
             - name: TORCHINDUCTOR_CACHE_DIR
               value: /cache/inductor
+            - name: HF_HUB_OFFLINE
+              value: "0"
             - name: NVIDIA_DISABLE_REQUIRE
               value: "true"
           resources:
@@ -79,7 +81,7 @@ spec:
               path: /health
               port: http
             periodSeconds: 10
-            failureThreshold: 90   # up to 15 minutes: the first start downloads the model
+            failureThreshold: 60   # up to 10 minutes: the first start downloads the model
           readinessProbe:
             httpGet:
               path: /health
