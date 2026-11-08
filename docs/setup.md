@@ -665,12 +665,15 @@ folder in this run is `D:\vLLM\vLLM-GenAI` (`/mnt/d/vLLM/vLLM-GenAI` in WSL2):
 
 ```bash
 cd ~/Workspaces/Code/vLLM/vLLM-GenAI
-COPYFILE_DISABLE=1 tar czf - . | ssh -i ~/.ssh/<key> <windows-user>@<pc-ip> \
-  'wsl -d Ubuntu-24.04 -- bash -lc "mkdir -p /mnt/d/vLLM/vLLM-GenAI && tar xzf - -C /mnt/d/vLLM/vLLM-GenAI"'
+COPYFILE_DISABLE=1 tar czf - --exclude=.DS_Store --exclude=.git/config . | ssh -i ~/.ssh/<key> <windows-user>@<pc-ip> \
+  'wsl -d Ubuntu-24.04 -- bash -lc "mkdir -p /mnt/d/vLLM/vLLM-GenAI && tar xzf - -C /mnt/d/vLLM/vLLM-GenAI --warning=no-unknown-keyword"'
 ```
 
-Then check that `git rev-parse HEAD` in the copy equals the one on the Mac. Run
+Work on the Mac and send the project again after each change. Do not edit the copy on the PC.
+Then check that `git rev-parse HEAD` in the copy equals the one on the Mac. The first time, run
 `git config core.fileMode false` in the copy, because the Windows disk does not keep Unix modes.
+The command above keeps `.git/config` of the PC, so this setting stays. Without that option, the
+Mac file replaces it and `git status` shows every file as changed (only the mode).
 The warnings `Ignoring unknown extended header keyword` come from macOS and are harmless.
 
 Without SSH, make a bundle on the Mac (`git bundle create /tmp/vllm-genai.bundle --all`), move the
