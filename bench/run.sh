@@ -14,7 +14,7 @@
 set -euo pipefail
 
 LABEL="${1:?usage: bench/run.sh <label>}"
-MODEL="${MODEL:-Qwen/Qwen3.5-4B}"
+MODEL="${MODEL:-Qwen/Qwen2.5-3B-Instruct}"
 SEED="${SEED:-0}"
 WARMUPS="${WARMUPS:-3}"
 CONCURRENCIES="${CONCURRENCIES:-1 8 16}"

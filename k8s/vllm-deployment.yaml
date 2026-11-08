@@ -1,4 +1,4 @@
-# vLLM chat pod. The memory flags come from the standalone run on WSL2 (docs/benchmarks.md, section VRAM).
+# vLLM chat pod.
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -17,20 +17,20 @@ metadata:
   name: vllm-qwen
   labels:
     app: vllm
-    variant: bf16
+    variant: fp16
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: vllm
-      variant: bf16
+      variant: fp16
   strategy:
     type: Recreate   # one GPU only: never run two vLLM pods at once
   template:
     metadata:
       labels:
         app: vllm
-        variant: bf16
+        variant: fp16
     spec:
       runtimeClassName: nvidia
       # Kubernetes adds env vars from the "vllm" Service (VLLM_PORT=tcp://...).
@@ -42,19 +42,19 @@ spec:
           image: docker.io/vllm/vllm-openai:v0.28.0
           imagePullPolicy: IfNotPresent
           args:
-            - Qwen/Qwen3.5-4B
-            - --served-model-name=Qwen/Qwen3.5-4B
-            - --dtype=bfloat16
-            - --language-model-only   # skip the vision encoder to save VRAM
-            - --gpu-memory-utilization=0.89   # measured: 0.80 leaves no KV cache. The max is set by the free VRAM at start.
-            - --max-model-len=4096
-            - --max-num-seqs=4
+            - Qwen/Qwen2.5-3B-Instruct
+            - --served-model-name=Qwen/Qwen2.5-3B-Instruct
+            - --dtype=float16
+            - --gpu-memory-utilization=0.80   # the desktop display also uses this GPU
+            - --max-model-len=8192
+            - --max-num-seqs=16
             - --enable-prefix-caching
-            - --reasoning-parser=qwen3
-            - '--default-chat-template-kwargs={"enable_thinking": false}'   # voice replies must be fast
+            - --enable-chunked-prefill
+            - --max-num-batched-tokens=2048
+            - '--speculative-config={"method":"ngram","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}'
             # Open WebUI sends tool_choice:"auto" on every chat request
             - --enable-auto-tool-choice
-            - --tool-call-parser=qwen3_coder
+            - --tool-call-parser=hermes
             - --host=0.0.0.0
             - --port=8000
           ports:

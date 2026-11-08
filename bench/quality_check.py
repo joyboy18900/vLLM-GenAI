@@ -37,7 +37,7 @@ def ask(base_url, model, prompt, timeout):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--base-url", default="http://localhost:8000")
-    ap.add_argument("--model", default="Qwen/Qwen3.5-4B")
+    ap.add_argument("--model", default="Qwen/Qwen2.5-3B-Instruct")
     ap.add_argument("--label", required=True, help="result folder name, for example baseline")
     ap.add_argument("--results-dir", default=str(HERE / "results"))
     ap.add_argument("--timeout", type=float, default=120)

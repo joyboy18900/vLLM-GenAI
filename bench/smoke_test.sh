@@ -9,7 +9,7 @@
 # The script is plain sh so that it also runs in the curl image (no bash there).
 set -u
 
-MODEL="Qwen/Qwen3.5-4B"
+MODEL="Qwen/Qwen2.5-3B-Instruct"
 FAILED=0
 
 check() { # name, then the command

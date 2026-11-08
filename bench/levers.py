@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""Set the vLLM Deployment to the baseline or to one optimization lever.
+"""Set the vLLM Deployment to one benchmark configuration.
 
-Each lever changes one thing against the baseline, so its effect is measured alone.
+Each configuration is a full argument list for the vLLM container. The first one is the baseline.
+The others add one lever, or a few levers together, so that their effect can be measured.
 
     python3 bench/levers.py list
-    python3 bench/levers.py show spec-ngram          # print the vLLM arguments
-    python3 bench/levers.py apply spec-ngram         # patch the Deployment and wait
-    bench/run.sh spec-ngram                          # then measure
-    python3 bench/quality_check.py --label spec-ngram
+    python3 bench/levers.py show spec_ngram          # print the vLLM arguments
+    python3 bench/levers.py apply spec_ngram         # patch the Deployment and wait
+    bench/run.sh spec_ngram                          # then measure
+    python3 bench/quality_check.py --label spec_ngram
 
-    python3 bench/levers.py apply awq --model <AWQ checkpoint>   # AWQ needs its own checkpoint
-
+`deployed` is the argument list of k8s/vllm-deployment.yaml. Keep the two in step.
 Flag names were checked against vllm/engine/arg_utils.py at v0.28.0.
 """
 import argparse
@@ -20,73 +20,97 @@ import sys
 
 DEPLOYMENT = "deploy/vllm-qwen"
 
-# Baseline: bf16, no optional engine levers. Prefix caching and chunked prefill are
-# switched off on purpose, so their levers show a real difference.
-# Keep every other flag in step with k8s/vllm-deployment.yaml. Change both files together.
-BASELINE = [
-    "Qwen/Qwen3.5-4B",
-    "--served-model-name=Qwen/Qwen3.5-4B",
-    "--dtype=bfloat16",
-    "--language-model-only",
-    "--gpu-memory-utilization=0.89",
-    "--max-model-len=4096",
-    "--max-num-seqs=4",
-    "--no-enable-prefix-caching",
-    "--no-enable-chunked-prefill",
-    "--reasoning-parser=qwen3",
-    '--default-chat-template-kwargs={"enable_thinking": false}',
+MODEL = "Qwen/Qwen2.5-3B-Instruct"
+MODEL_AWQ = "Qwen/Qwen2.5-3B-Instruct-AWQ"
+
+# The same at the end of every configuration.
+TAIL = [
+    f"--served-model-name={MODEL}",
     "--enable-auto-tool-choice",
-    "--tool-call-parser=qwen3_coder",
+    "--tool-call-parser=hermes",
     "--host=0.0.0.0",
     "--port=8000",
 ]
 
-NGRAM = {"method": "ngram", "num_speculative_tokens": 4, "prompt_lookup_max": 4, "prompt_lookup_min": 2}
-MTP = {"method": "qwen3_next_mtp", "num_speculative_tokens": 2}  # from the Qwen3.5-4B model card
+NGRAM = ('--speculative-config={"method":"ngram","num_speculative_tokens":4,'
+         '"prompt_lookup_max":4,"prompt_lookup_min":2}')
+DRAFT = ('--speculative-config={"method":"draft_model",'
+         '"model":"Qwen/Qwen2.5-0.5B-Instruct","num_speculative_tokens":3}')
+COMPILE = ["-cc.mode=3", "-cc.cudagraph_mode=FULL_AND_PIECEWISE"]
 
-# name: (flags to remove by prefix, flags to add)
-LEVERS = {
-    "baseline": ([], []),
-    "prefix-caching": (["--no-enable-prefix-caching"], ["--enable-prefix-caching"]),
-    "chunked-prefill": (
-        ["--no-enable-chunked-prefill"],
-        ["--enable-chunked-prefill", "--max-num-batched-tokens=2048"],
-    ),
-    "spec-ngram": ([], ["--speculative-config=" + json.dumps(NGRAM)]),
-    "spec-mtp": ([], ["--speculative-config=" + json.dumps(MTP)]),
-    "awq": ([], ["--quantization=awq"]),
-    "fp8-weights": ([], ["--quantization=fp8"]),
-    "fp8-kv-cache": ([], ["--kv-cache-dtype=fp8"]),
-    "thinking-on": (
-        ["--default-chat-template-kwargs"],
-        ['--default-chat-template-kwargs={"enable_thinking": true}'],
-    ),
+CONFIGS = {
+    # fp16, the plain engine
+    "baseline": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.85",
+        "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
+    ],
+    # AWQ W4A16: 4-bit weights
+    "awq": [
+        MODEL_AWQ, "--gpu-memory-utilization=0.85",
+        "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
+    ],
+    # scheduler and memory right-sizing
+    "sched": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.92",
+        "--max-model-len=4096", "--max-num-seqs=8", "--max-num-batched-tokens=4096",
+        "--enable-prefix-caching",
+    ],
+    # fp8 KV cache
+    "kv_fp8": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.92",
+        "--max-model-len=4096", "--max-num-seqs=8", "--max-num-batched-tokens=4096",
+        "--enable-prefix-caching", "--kv-cache-dtype=fp8",
+    ],
+    # speculative decoding: n-gram (prompt lookup), no extra weights
+    "spec_ngram": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.85",
+        "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
+        NGRAM,
+    ],
+    # speculative decoding: a draft model (about 1 GiB more)
+    "spec_draft": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.85",
+        "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
+        DRAFT,
+    ],
+    # torch.compile mode 3 and full CUDA graphs
+    "compile": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.85",
+        "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
+        *COMPILE,
+    ],
+    # the arguments of k8s/vllm-deployment.yaml
+    "deployed": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.80",
+        "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
+        "--enable-chunked-prefill", "--max-num-batched-tokens=2048",
+        NGRAM,
+    ],
+    # AWQ, scheduler sizing, compile, and n-gram together
+    "min_latency": [
+        MODEL_AWQ, "--gpu-memory-utilization=0.92",
+        "--max-model-len=4096", "--max-num-seqs=8", "--max-num-batched-tokens=4096",
+        "--enable-prefix-caching", *COMPILE, NGRAM,
+    ],
 }
 
 
-def build_args(lever, model=None):
-    remove, add = LEVERS[lever]
-    args = [a for a in BASELINE if not any(a.startswith(r) for r in remove)] + add
-    if model:
-        args[0] = model
-    elif lever == "awq":
-        sys.exit("the awq lever needs --model <AWQ checkpoint>")
-    return args
+def build_args(name):
+    return CONFIGS[name] + TAIL
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("command", choices=["list", "show", "apply"])
-    ap.add_argument("lever", nargs="?", choices=sorted(LEVERS))
-    ap.add_argument("--model", help="checkpoint to use instead of the baseline model")
+    ap.add_argument("config", nargs="?", choices=sorted(CONFIGS))
     a = ap.parse_args()
 
     if a.command == "list":
-        print("\n".join(sorted(LEVERS)))
+        print("\n".join(CONFIGS))
         return
-    if not a.lever:
-        ap.error("a lever name is required")
-    args = build_args(a.lever, a.model)
+    if not a.config:
+        ap.error("a configuration name is required")
+    args = build_args(a.config)
     if a.command == "show":
         print(json.dumps(args, indent=2))
         return
