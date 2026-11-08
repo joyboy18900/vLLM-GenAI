@@ -111,8 +111,9 @@ kubectl delete pod gpu-test
 
 ## vLLM standalone on the PC
 
-Status: ran on WSL2 on 2026-11-08 (not on Ubuntu or EC2). The API checks passed and the VRAM was
-measured. See `docs/benchmarks.md`, section "VRAM". Repeat it on Ubuntu or EC2 for the final numbers.
+Status: not run yet with this model. An earlier run on WSL2 used another model (Qwen3.5-4B). Its
+numbers are in `docs/benchmarks.md`, section "Earlier try". Run this section again with
+Qwen2.5-3B-Instruct and write the numbers in `docs/benchmarks.md`.
 
 This step runs vLLM in Docker, outside Kubernetes, with the image that k3s uses later.
 
@@ -136,14 +137,15 @@ nvidia-smi --query-gpu=memory.used,memory.total --format=csv   # this is the "de
 docker run --rm --gpus all --ipc=host -p 8000:8000 \
   -v "$HOME/.cache/huggingface:/root/.cache/huggingface" -v "$HOME/.cache/vllm:/root/.cache/vllm" \
   -e NVIDIA_DISABLE_REQUIRE=true \
-  vllm/vllm-openai:v0.28.0 Qwen/Qwen3.5-4B \
-  --served-model-name Qwen/Qwen3.5-4B --dtype bfloat16 --language-model-only \
-  --gpu-memory-utilization 0.89 --max-model-len 4096 --max-num-seqs 4 \
-  --reasoning-parser qwen3 --default-chat-template-kwargs '{"enable_thinking": false}' \
-  --enable-auto-tool-choice --tool-call-parser qwen3_coder
+  vllm/vllm-openai:v0.28.0 Qwen/Qwen2.5-3B-Instruct \
+  --served-model-name Qwen/Qwen2.5-3B-Instruct --dtype float16 \
+  --gpu-memory-utilization 0.80 --max-model-len 8192 --max-num-seqs 16 \
+  --enable-prefix-caching --enable-chunked-prefill --max-num-batched-tokens 2048 \
+  --speculative-config '{"method":"ngram","num_speculative_tokens":4,"prompt_lookup_max":4,"prompt_lookup_min":2}' \
+  --enable-auto-tool-choice --tool-call-parser hermes
 ```
 
-The first start downloads the model (8.68 GiB). The second mount keeps the compile cache, so the next
+The first start downloads the model (about 6 GiB). The second mount keeps the compile cache, so the next
 start is faster. Wait for the log line that says the server is ready.
 
 How to set `--gpu-memory-utilization`: vLLM refuses to start when the free VRAM is lower than
@@ -155,15 +157,16 @@ blocks`, there is too little VRAM left for the KV cache. Raise the value, or low
 ### Check
 
 ```bash
-curl -s http://localhost:8000/v1/models        # expected: the model Qwen/Qwen3.5-4B in the list
+curl -s http://localhost:8000/v1/models        # expected: the model Qwen/Qwen2.5-3B-Instruct in the list
 curl -s http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
-  -d '{"model":"Qwen/Qwen3.5-4B","messages":[{"role":"user","content":"Say hi"}]}'
+  -d '{"model":"Qwen/Qwen2.5-3B-Instruct","messages":[{"role":"user","content":"Say hi"}]}'
 curl -sN http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
-  -d '{"model":"Qwen/Qwen3.5-4B","stream":true,"messages":[{"role":"user","content":"Say hi"}]}'
+  -d '{"model":"Qwen/Qwen2.5-3B-Instruct","stream":true,"messages":[{"role":"user","content":"Say hi"}]}'
 ```
 
 Expected: a non-empty answer in both calls, and a stream of `data:` lines for the second call.
-Thinking must be off: the answer must not contain a `reasoning` field or a `<think>` block.
+Tool calling: send a request with a `tools` list and `"tool_choice":"auto"`. The answer must have
+`tool_calls` with the right arguments.
 
 ### Measure the VRAM
 
@@ -177,30 +180,14 @@ Copy these numbers into `docs/benchmarks.md` (section "VRAM") and into the table
 | Total VRAM in use | `nvidia-smi` while vLLM is idle |
 | Desktop display | the number you wrote down before the start |
 
-### Measure with and without `--language-model-only`
-
-The flag skips the vision encoder. It is on by default because VRAM is tight, but nobody
-measured it yet. Start vLLM twice, once with the flag and once without it. Write the VRAM numbers
-of both runs in `docs/benchmarks.md`. Keep the flag only if the difference is needed.
-
-Result on WSL2: without the flag the model needs 0.62 GiB more (8.61 GiB, not 7.99 GiB) and vLLM
-does not start (KV cache memory is -0.18 GiB). The flag is needed on this 12 GB GPU.
-
 ### If something does not fit
 
-1. If the KV cache is too small, test fp8 weights (`--quantization fp8`) and fp8 KV cache
-   (`--kv-cache-dtype fp8`) one at a time. Record the choice and the reason.
-2. If vLLM v0.28.0 cannot load Qwen3.5-4B, use Qwen2.5-3B-Instruct (the model of the reference
-   project) and write the reason in `docs/benchmarks.md`. Change the model name in
-   `k8s/vllm-deployment.yaml`, `bench/run.sh`, and `bench/quality_check.py`. For Qwen2.5 use
-   `--tool-call-parser hermes` and remove `--reasoning-parser`, `--language-model-only`, and
-   `--default-chat-template-kwargs`.
-
-3. If vLLM stops at start with an error about prefix caching or chunked prefill, the cause can be
-   that Qwen3.5 is a hybrid model. Remove `--enable-prefix-caching` from `k8s/vllm-deployment.yaml`.
-   Add `--no-enable-prefix-caching` to the start command above (the engine turns prefix caching on
-   by default for this model). For the levers, skip the lever `chunked-prefill` or
-   `prefix-caching` that fails. Write the error and the choice in `docs/benchmarks.md`.
+1. If the KV cache is too small, raise `--gpu-memory-utilization` (up to the free VRAM), or lower
+   `--max-model-len` and `--max-num-seqs`. Then test the fp8 KV cache or AWQ (the configurations
+   `kv_fp8` and `awq` in `bench/levers.py`). Record the choice and the reason.
+2. If vLLM stops at start with an error about speculative decoding or chunked prefill, remove that
+   flag from the start command and from `k8s/vllm-deployment.yaml`. Write the error and the choice
+   in `docs/benchmarks.md`.
 
 ### Stop
 
@@ -263,14 +250,11 @@ pins `av==15.1.0` for this reason.
 
 ## vLLM on k3s
 
-Status: applied on WSL2 on 2026-11-08, result not seen. The memory flags in `k8s/vllm-deployment.yaml`
-were measured in the standalone run on WSL2 (`--gpu-memory-utilization=0.89`). The Deployment,
-the Service, and the PVC were created. The SSH connection dropped while the script waited for the
-pod, so the start of the pod, the chat completion through the Service, and the restart check are
-not tested. The vLLM image was imported into k3s from Docker in 211 s.
-
-Sources for the flags: the Qwen3.5-4B model card (reasoning parser `qwen3`, tool parser
-`qwen3_coder`, `--language-model-only`) and the vLLM docs (`--default-chat-template-kwargs`).
+Status: applied on WSL2 on 2026-11-08 with an earlier model (Qwen3.5-4B), result not seen. The
+Deployment, the Service, and the PVC were created. The SSH connection dropped while the script waited
+for the pod, so the start of the pod, the chat completion through the Service, and the restart
+check are not tested. The vLLM image was imported into k3s from Docker in 211 s. The Deployment
+now uses Qwen2.5-3B-Instruct, and this model has not run on k3s yet.
 
 ### Deploy
 
@@ -290,7 +274,7 @@ Chat completion from a pod in the cluster:
 ```bash
 kubectl run chat --rm -i --restart=Never --image=curlimages/curl --command -- \
   curl -s http://vllm:8000/v1/chat/completions -H "Content-Type: application/json" \
-  -d '{"model":"Qwen/Qwen3.5-4B","messages":[{"role":"user","content":"Say hi"}]}'
+  -d '{"model":"Qwen/Qwen2.5-3B-Instruct","messages":[{"role":"user","content":"Say hi"}]}'
 ```
 
 Expected: JSON with a non-empty `choices[0].message.content`.
@@ -521,14 +505,13 @@ Status: the Python scripts ran against a fake server and fake data on a Mac (log
 `bench/run.sh` is written, untested. It needs the real cluster.
 
 `bench/run.sh <label>` runs `vllm bench serve` inside the vLLM pod for three workloads at
-concurrency 1, 8, and 16. The parameters are the same as in the reference project: seed 0, 3 warmup
-requests, 24, 96, and 160 prompts for concurrency 1, 8, and 16, and `--ignore-eos`. The workloads are
-random tokens (input 512, output 128, engine only), chat text (output 128), and a shared prefix
-(prefix 1024, input 256, output 128, prefix caching, concurrency 1 and 8 only). The reference uses the
-ShareGPT file for the chat text. This project uses its own 28 prompts in `bench/prompts`, because the
-file needs a download. The flags come from the vLLM v0.28.0 source. Raw JSON goes to
-`bench/results/<label>/`. With `--max-num-seqs 4` the runs at concurrency 8 and 16 queue requests.
-Read the queue time and do not take it as a failure of a lever.
+concurrency 1, 8, and 16. It uses seed 0, 3 warmup requests, 24, 96, and 160 prompts for
+concurrency 1, 8, and 16, and `--ignore-eos`. The workloads are random tokens (input 512, output 128,
+engine only), chat text (output 128), and a shared prefix (prefix 1024, input 256, output 128,
+prefix caching, concurrency 1 and 8 only). The chat text is the 28 prompts in `bench/prompts`. The
+flags come from the vLLM v0.28.0 source. Raw JSON goes to `bench/results/<label>/`. With
+`--max-num-seqs 16` the run at concurrency 16 is at the limit of the engine. Read the queue time
+and do not take it as a failure of a configuration.
 
 ```bash
 bench/run.sh baseline
@@ -541,32 +524,28 @@ Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, an
 
 ## Optimization levers
 
-Status: `bench/levers.py` builds the argument list of every lever (checked offline). The
-patch and the measurements are untested. Nothing is measured.
+Status: `bench/levers.py` builds the argument list of every configuration (checked offline). The
+patch and the measurements are not run. Nothing is measured.
 
-Each lever changes one thing against the baseline. The baseline in `bench/levers.py` has
-prefix caching and chunked prefill switched off, so their levers show a real difference. If a
-lever is already the default in vLLM v0.28.0 for this model, the result shows no change.
-Write that in `docs/benchmarks.md`.
+Each configuration is a full argument list for the vLLM container. `baseline` is the plain engine.
+The others change one thing, or a few things together (`min_latency`). `deployed` is the argument
+list of `k8s/vllm-deployment.yaml`.
 
 ```bash
 python3 bench/levers.py list
 python3 bench/levers.py apply baseline
 bench/run.sh baseline && python3 bench/quality_check.py --label baseline
 
-# repeat for each lever, for example:
-python3 bench/levers.py apply prefix-caching
-bench/run.sh prefix-caching && python3 bench/quality_check.py --label prefix-caching
+# repeat for each configuration, for example:
+python3 bench/levers.py apply spec_ngram
+bench/run.sh spec_ngram && python3 bench/quality_check.py --label spec_ngram
 ```
 
-If the lever `spec-mtp` does not start, change the `method` value in `bench/levers.py`. The value
-`qwen3_next_mtp` comes from the Qwen3.5-4B model card. vLLM v0.28.0 also accepts `qwen3_5_mtp` and
-`mtp`. Try them one at a time and write the working name in `docs/benchmarks.md`.
-
-Levers: `prefix-caching`, `chunked-prefill`, `spec-ngram`, `spec-mtp`, `awq`
-(`--model <AWQ checkpoint>`), `fp8-weights`, `fp8-kv-cache`, `thinking-on`.
-Read the VRAM of each lever from `nvidia-smi` and the vLLM log. A lever is lossless when the
-quality check gives the same answers as the baseline.
+Configurations: `baseline`, `awq`, `sched`, `kv_fp8`, `spec_ngram`, `spec_draft`, `compile`,
+`deployed`, and `min_latency`. Read the VRAM of each one from `nvidia-smi` and the vLLM log. A
+configuration is lossless when the quality check gives the same answers as the baseline. The first
+start of `compile` and `min_latency` builds the compile cache and takes several minutes. If a
+configuration does not start, write the error in `docs/benchmarks.md` and go on to the next one.
 
 Choose the best lossless combination. Write the reasons in `docs/benchmarks.md`. Then put the
 final flags in `k8s/vllm-deployment.yaml`, apply it, and run `bench/smoke_test.sh`.
@@ -762,7 +741,7 @@ kubectl -n monitoring port-forward svc/grafana 3000:3000   # http://localhost:30
 | k3s v1.37.2+k3s1 | Node `Ready`. The NVIDIA runtime is in the containerd config. |
 | Device plugin v0.20.1 | Log says `Detected platform: wsl`. The node reports `nvidia.com/gpu: 1`. |
 | `k8s/gpu-test.yaml` | The pod ran `nvidia-smi` and ended with `Succeeded`. |
-| vLLM standalone (Docker) | Serves Qwen3.5-4B. API, thinking off, and tool call passed. See `docs/benchmarks.md`. |
+| vLLM standalone (Docker) | Ran with an earlier model (Qwen3.5-4B): API, stream, and tool call passed, VRAM measured. See `docs/benchmarks.md`. Not run with Qwen2.5-3B-Instruct yet. |
 | Speech pods on k3s | Ready in 27 s. Round trip in the cluster returned "Hello World!". `/metrics` reachable. |
 | Open WebUI on k3s | Pod ready. `/health` returned 200 through the Service. |
 | Images into k3s | `docker save <image> \| k3s ctr images import -` (the vLLM image, 28.8 GB, took 211 s). |
@@ -792,7 +771,6 @@ in this runbook stay the same. Check these differences first.
 | Topic | What to check |
 |---|---|
 | fp8 and bf16 | A GPU older than Ada has no fp8. A GPU older than Ampere has no bf16. On such a GPU use `--dtype float16` and do not use the fp8 levers. |
-| Model support | Qwen3.5 uses a layer type that has known problems on Turing GPUs (the T4 family). If vLLM cannot start the model, use Qwen2.5-3B-Instruct. See the section "vLLM standalone on the PC". |
 | VRAM | The size is different. Calculate the VRAM budget again and set `--gpu-memory-utilization` and `--max-model-len` for it. No desktop display uses the GPU, so more VRAM is free. |
 | Quota | A new AWS account has a quota of zero for GPU instances. Ask for the quota "Running On-Demand G and VT instances" in the region you use. The quota counts vCPU. Wait for the support case to close. |
 | Cost | You pay for each hour. Set an AWS Budget alert before the first launch. Stop the machine when you do not use it. |
@@ -818,32 +796,3 @@ in this runbook stay the same. Check these differences first.
    Open `http://localhost:8080` (web UI) and `http://localhost:3000` (Grafana).
 7. **Stop.** Use "Stop instance" when you finish. The disk stays and costs a small amount. Use
    "Terminate" only when you want to delete everything. Deploy again with the same files.
-
-## Values that differ from the reference project
-
-All values of the Kubernetes files, the speech servers, and the benchmark runs equal the reference
-project, except the ones in this table. Each difference has a reason. The environment names of the
-speech servers also differ (`STT_*` and `TTS_*` here, `WHISPER_*` and `PIPER_*` there). The values
-behind them are equal.
-
-| Value | Reference | This project | Why |
-|---|---|---|---|
-| Model and served name | Qwen2.5-3B-Instruct | Qwen3.5-4B | the spec |
-| `--dtype` | float16 | bfloat16 | the T4 has no bf16. The RTX 4070 SUPER has it, and the spec chooses bf16 |
-| Tool-call parser, reasoning parser, thinking | hermes, none, none | qwen3_coder, qwen3, thinking off | these belong to the model |
-| `--language-model-only` | not used | on | measured: without it vLLM does not start (KV cache memory -0.18 GiB) |
-| `--gpu-memory-utilization` | 0.80 | 0.89 | measured: 0.80 leaves no KV cache (-0.15 GiB), 0.90 is refused at the start |
-| `--max-model-len`, `--max-num-seqs` | 8192, 16 | 4096, 4 | not tested at the reference values on this model. The KV cache holds 16,384 tokens |
-| Chunked prefill, `--max-num-batched-tokens=2048`, n-gram speculative decoding | on | off in the baseline | these are levers (ticket 13). They are measured one by one |
-| Container images | the Python image, packages installed at the start | built images, pinned versions | the spec |
-| Open WebUI image | `main` | `v0.13.0` | the spec says pinned |
-| Open WebUI `ENABLE_PERSISTENT_CONFIG` | not set | false | the manifest stays the source of the settings |
-| Storage | hostPath on `/mnt/data` | PersistentVolumeClaims (local-path) | the spec |
-| Grafana access | anonymous admin | login with a Secret, non-root user | ticket 07 asks for a login |
-| Prometheus user | root | non-root (65534) | PVC, and a safer default |
-| Web UI Service | `open-webui`, NodePort 30080 | `webui` (ClusterIP) and `webui-nodeport` (30080) | the Service names of the spec |
-| Piper | the 2023 binary release | `piper-tts` 1.8.0 (pip) | built image |
-| NVIDIA device plugin | v0.17.4 | v0.20.1 | seen to detect WSL2 |
-| Chat prompts of the benchmark | ShareGPT file | own 28 prompts | no download needed |
-| Quality prompts | 12 Thai prompts | 14 English and Thai prompts | English first |
-

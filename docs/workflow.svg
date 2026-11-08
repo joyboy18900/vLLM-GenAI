@@ -34,7 +34,7 @@
 <circle cx="342" cy="205" r="15" fill="#2f66d0"/>
 <text x="342" y="211" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">2</text>
 <text x="470" y="230" font-size="19" font-weight="700" fill="#2f66d0" text-anchor="middle">vLLM (LLM Inference)</text>
-<text x="455" y="258" font-size="16" font-weight="400" fill="#222" text-anchor="middle">Qwen3.5-4B, bf16</text>
+<text x="455" y="258" font-size="16" font-weight="400" fill="#222" text-anchor="middle">Qwen2.5-3B-Instruct, fp16</text>
 <text x="455" y="282" font-size="16" font-weight="400" fill="#222" text-anchor="middle">:8000</text>
 <rect x="640" y="185" width="200" height="110" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
 <text x="740" y="222" font-size="19" font-weight="700" fill="#2e8b57" text-anchor="middle">GPU</text>
@@ -149,7 +149,7 @@
 <text x="1536" y="287" font-size="17" font-weight="700" fill="#2f66d0" text-anchor="start">Open WebUI > vLLM</text>
 <text x="1536" y="314" font-size="15" font-weight="400" fill="#444" text-anchor="start">Chat requests use the</text>
 <text x="1536" y="335" font-size="15" font-weight="400" fill="#444" text-anchor="start">OpenAI API. vLLM runs</text>
-<text x="1536" y="356" font-size="15" font-weight="400" fill="#444" text-anchor="start">Qwen3.5-4B on the GPU.</text>
+<text x="1536" y="356" font-size="15" font-weight="400" fill="#444" text-anchor="start">Qwen2.5-3B-Instruct on the GPU.</text>
 <circle cx="1510" cy="420" r="15" fill="#d6456b"/>
 <text x="1510" y="426" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">3</text>
 <text x="1536" y="427" font-size="17" font-weight="700" fill="#d6456b" text-anchor="start">Voice Flow (Optional)</text>

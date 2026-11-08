@@ -25,12 +25,12 @@ started it after the vLLM Bangkok meetup, to learn how an LLM serving stack work
 ```
 User (type or speak) -> Open WebUI (HTTPS through Traefik, or an SSH tunnel to NodePort :30080)
   -> [voice] STT (faster-whisper, CPU) -> text
-  -> Service "vllm" -> vLLM pod (Qwen3.5-4B, GPU) -> answer (streamed)
+  -> Service "vllm" -> vLLM pod (Qwen2.5-3B-Instruct, GPU) -> answer (streamed)
   -> [voice] TTS (Piper, CPU) -> sound -> user
 ```
 
 - **k3s** (a small Kubernetes) with one node runs the pods, connects them, and gives out the GPU.
-- **vLLM** holds the GPU and serves Qwen3.5-4B (bf16, thinking mode off).
+- **vLLM** holds the GPU and serves Qwen2.5-3B-Instruct (fp16).
 - **STT and TTS** run on the CPU only. They take no VRAM and stay always on.
 - **Ingress**: Traefik with HTTPS from a local certificate authority.
 - **Monitoring**: Prometheus, Grafana, Loki, Alertmanager, DCGM exporter, Node Exporter, and
@@ -158,7 +158,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | Part | Status |
 |---|---|
 | GPU node: NVIDIA Container Toolkit, Docker, k3s, device plugin, GPU test pod | Ran on WSL2: the node reports `nvidia.com/gpu: 1` and a pod runs `nvidia-smi` |
-| vLLM with Qwen3.5-4B (standalone, in Docker) | Ran on WSL2: chat, stream, tool calls, and thinking off work. VRAM measured (`docs/benchmarks.md`) |
+| vLLM standalone (in Docker) | Ran on WSL2 with an earlier model (Qwen3.5-4B): chat, stream, and tool calls worked. Not run yet with Qwen2.5-3B-Instruct |
 | STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac. Ran on k3s in WSL2: the round trip returned "Hello World!" |
 | Open WebUI | Pod ready on k3s in WSL2, `/health` answers. Chat in the browser is not tested |
 | vLLM on k3s, monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Applied on k3s in WSL2. The result was not checked. Config checks passed (`kubeconform`, `promtool`, `amtool`, `loki -verify-config`) |
@@ -176,8 +176,8 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 The code and the documents are written. What is left is to run and check the stack, in three runs.
 Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 
-1. **PC, WSL2 (partly done).** Done: the GPU node, vLLM standalone (VRAM measured), the speech pods,
-   and the Open WebUI pod. Left: the vLLM pod on k3s (start, a chat through the Service, a restart
+1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods,
+   and the Open WebUI pod. Left: vLLM with Qwen2.5-3B-Instruct, standalone and on k3s (VRAM and KV cache, start, a chat through the Service, a restart
    without a new download), the monitoring pods (DCGM may not work on WSL2), chat and voice in the
    browser, the benchmark and the levers (to choose the final vLLM flags), and the smoke test.
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
@@ -185,13 +185,12 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check
    the differences in "If you run on EC2" (fp8 and bf16 support, VRAM, quota, cost).
 
-The values of the Kubernetes files, the speech servers, and the benchmark runs equal the reference project, except the ones listed in `docs/setup.md` (section "Values that differ from the reference project").
 
 After each run: tick the boxes of the tickets that passed, update the status tables (this README,
 `docs/setup.md`, `docs/benchmarks.md`), and put the final vLLM flags in `k8s/vllm-deployment.yaml`.
 
 Small items that are not test runs:
-- Fix the arrows in the monitoring box of `docs/workflow.png` (the notes are in ticket 16).
+- Make `docs/workflow.png` again: fix the arrows in the monitoring box and the model name in the vLLM box (the notes are in ticket 16).
 - Thai TTS (bonus): run `bench/thai_tts`, listen, and choose a voice (ticket 18).
 - When the PC runs are over, remove the SSH access (see "Remote access" in `docs/setup.md`).
 

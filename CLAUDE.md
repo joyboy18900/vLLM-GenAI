@@ -23,13 +23,13 @@ A practice project for **LLM serving infrastructure**, end to end. The product i
 
 The CPU has no integrated graphics. The desktop display also uses the RTX 4070 SUPER, so some VRAM is not available to vLLM.
 
-**VRAM budget** (everything on one 12GB RTX 4070 SUPER, measured on WSL2 with a Windows desktop, see `docs/benchmarks.md`):
+**Approximate VRAM budget** (everything on one 12GB RTX 4070 SUPER):
 
 | Part | VRAM |
 |---|---|
-| Qwen3.5-4B (bf16, text-only) | 7.99GB (8.61GB with the vision encoder) |
-| KV cache | 0.92GB (16,384 tokens, 4 requests of 4,096 tokens) |
-| Desktop display | 0.4-1.1GB (changes over time) |
+| Qwen2.5-3B-Instruct (fp16) | ~6GB |
+| KV cache + batching headroom | ~2-3GB |
+| Desktop display | ~0.5-1GB |
 | faster-whisper (STT) | 0 (CPU only, no GPU) |
 | Piper (TTS) | 0 (CPU only, no GPU) |
 
@@ -45,7 +45,7 @@ The CPU has no integrated graphics. The desktop display also uses the RTX 4070 S
 
 ## Models (2)
 
-1. **Qwen3.5-4B** (chat): [HuggingFace](https://huggingface.co/Qwen/Qwen3.5-4B), bf16, served by vLLM, supports LoRA adapters for weekly retraining. Thinking mode is off by default, because it makes voice replies slow.
+1. **Qwen2.5-3B-Instruct** (chat): [HuggingFace](https://huggingface.co/Qwen/Qwen2.5-3B-Instruct), fp16, served by vLLM, supports LoRA adapters for weekly retraining.
 2. **Speech stack** (the "speak" side)
    - **STT**: faster-whisper (small/base model), fast and light
    - **TTS**: Piper, CPU only, low latency, takes no VRAM from the LLM
@@ -58,7 +58,7 @@ The CPU has no integrated graphics. The desktop display also uses the RTX 4070 S
 ```
 User (text or voice) → Open WebUI
   → [voice] STT (faster-whisper) converts speech to text first
-  → LLM-D router (mock) → vLLM pod (Qwen3.5-4B) → response
+  → LLM-D router (mock) → vLLM pod (Qwen2.5-3B-Instruct) → response
   → [voice mode] TTS (Piper) converts the text back to speech
   → back to the user
 ```
@@ -86,7 +86,7 @@ They are very light (Piper uses no GPU, faster-whisper runs on CPU). They do not
 There is one GPU only. When the CronJob runs training, it must scale the vLLM chat pod replicas down for a short time (Sunday 02:00 is a low-traffic window for a single user). After training, scale back up with the new adapter.
 
 ### 7. LoRA + DPO instead of full fine-tune
-12GB of VRAM is not enough for a full fine-tune of a 4B model (the optimizer state is too large). Use **LoRA** (PEFT) with **DPO** (TRL) instead. It is much lighter, and vLLM can load a LoRA adapter dynamically without a full pod restart.
+12GB of VRAM is not enough for a full fine-tune of a 3B model (the optimizer state is too large). Use **LoRA** (PEFT) with **DPO** (TRL) instead. It is much lighter, and vLLM can load a LoRA adapter dynamically without a full pod restart.
 
 ### 8. Feedback as preference pairs for DPO
 👍 = chosen, 👎 = rejected, compared for the same prompt. If there are not enough matching pairs, fall back to SFT filtering with only the 👍 responses.
@@ -124,7 +124,7 @@ Open WebUI (👍/👎 per message)
 - **Storage**: PersistentVolumeClaims (models, cache, logs)
 - **Feedback streaming**: Redis Streams
 - **Training**: PEFT (LoRA) + TRL (DPOTrainer)
-- **Chat model**: Qwen3.5-4B (bf16 baseline, AWQ for multi-instance)
+- **Chat model**: Qwen2.5-3B-Instruct (fp16 baseline, AWQ for multi-instance)
 
 ## Repo Layout (suggested)
 

@@ -14,7 +14,7 @@ depends on a measurement, the guide says so and does not give a number.
 | Part | What it does | Service name and port |
 |---|---|---|
 | Open WebUI | The chat page. It takes your text or voice and calls the other parts. | `webui` 8080 |
-| vLLM | Runs the chat model (Qwen3.5-4B) on the GPU. | `vllm` 8000 |
+| vLLM | Runs the chat model (Qwen2.5-3B-Instruct) on the GPU. | `vllm` 8000 |
 | STT (faster-whisper) | Turns speech into text. Runs on the CPU. | `stt` 8000 |
 | TTS (Piper) | Turns text into speech. Runs on the CPU. | `tts` 8000 |
 | k3s | Runs all the parts as pods and connects them. | - |
@@ -50,7 +50,7 @@ OpenAI chat API. This is the call, in short:
 ```
 POST http://vllm:8000/v1/chat/completions
 {
-  "model": "Qwen/Qwen3.5-4B",
+  "model": "Qwen/Qwen2.5-3B-Instruct",
   "messages": [ {"role": "user", "content": "Say hi"} ],
   "stream": true
 }
@@ -73,8 +73,9 @@ address of the pod behind it.
    waits or preempts a request. A preempted request loses its blocks and is computed again. The
    dashboard shows this.
 
-Thinking mode is off. The server flag `--default-chat-template-kwargs` sets `enable_thinking` to
-false. The model answers at once, which keeps voice answers fast.
+vLLM also reuses the KV cache of a prompt start that it has seen before (prefix caching). It guesses
+the next tokens from the prompt text (n-gram speculative decoding) and checks the guess in one step.
+A wrong guess costs little.
 
 ### 1.4 The answer comes back in pieces
 
@@ -208,8 +209,8 @@ Alertmanager <-- alerts from Prometheus rules
 
 ## Part 5: what is not built yet
 
-The design in `CLAUDE.md` has more than the system has today. These parts are planned, as in the
-reference project, and are not built:
+The design in `CLAUDE.md` has more than the system has today. These parts are planned and are not
+built:
 
 - the mock LLM-D router and scale-to-zero
 - the feedback collector with Redis Streams

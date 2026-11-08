@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Run `vllm bench serve` for three workloads at concurrency 1, 8, and 16.
-# The parameters are the same as in the reference project (bench/orchestrate.py there):
+# Workloads:
 #   random   workload A: random tokens, input 512, output 128 (engine only)
-#   chat     workload C: chat text, output 128 (the reference uses ShareGPT, we use our own prompts)
+#   chat     workload C: chat text from bench/prompts, output 128
 #   prefix   workload B: shared prefix 1024, input 256, output 128 (prefix caching), concurrency 1 and 8
 # The command runs inside the vLLM pod, so it measures the engine without network noise.
 # The benchmark shares the pod CPU with the server. Do not run other work at the same time.
@@ -19,7 +19,7 @@ SEED="${SEED:-0}"
 WARMUPS="${WARMUPS:-3}"
 CONCURRENCIES="${CONCURRENCIES:-1 8 16}"
 
-nprompts() { # prompts per concurrency level, as in the reference. NUM_PROMPTS overrides all levels.
+nprompts() { # prompts per concurrency level. NUM_PROMPTS overrides all levels.
   case "$1" in 1) echo 24 ;; 8) echo 96 ;; 16) echo 160 ;; *) echo 64 ;; esac
 }
 
