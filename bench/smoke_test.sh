@@ -70,8 +70,9 @@ https_ok() { # host, path
 }
 
 echo "== in the cluster =="
+# The script text goes in as an argument. Stdin of `kubectl run -i` can lose its first bytes.
 OUT="$(kubectl run "smoke-$$" --rm -i --restart=Never --image=curlimages/curl:8.11.1 \
-  --command -- sh -s -- --in-cluster < "$0" 2>&1)"
+  --command -- sh -c "$(cat "$0")" smoke --in-cluster < /dev/null 2>&1)"
 echo "$OUT" | grep -E '^(PASS|FAIL)'
 # kubectl run may not pass on the exit code of the pod, so read the text.
 if echo "$OUT" | grep -q '^FAIL' || ! echo "$OUT" | grep -q '^PASS'; then FAILED=1; fi
