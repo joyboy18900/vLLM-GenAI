@@ -170,10 +170,4 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | Feedback pipeline (Redis Streams) | Planned, not built |
 | Weekly retraining (LoRA and DPO) | Planned, not built |
 
-
-## What is left
-
-See [`docs/what-is-left.md`](docs/what-is-left.md). It lists the test runs that are left, the small
-items, and what a new session needs to know.
-
 > This project is for practice of infra and scheduling. It is not a production system.
