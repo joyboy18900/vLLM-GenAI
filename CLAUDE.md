@@ -23,13 +23,13 @@ A practice project for **LLM serving infrastructure**, end to end. The product i
 
 The CPU has no integrated graphics. The desktop display also uses the RTX 4070 SUPER, so some VRAM is not available to vLLM.
 
-**Approximate VRAM budget** (everything on one 12GB RTX 4070 SUPER):
+**VRAM budget** (everything on one 12GB RTX 4070 SUPER, measured on WSL2 with a Windows desktop, see `docs/benchmarks.md`):
 
 | Part | VRAM |
 |---|---|
-| Qwen3.5-4B (bf16) | ~8GB |
-| KV cache + batching headroom | ~2-3GB |
-| Desktop display | ~0.5-1GB |
+| Qwen3.5-4B (bf16, text-only) | 7.99GB (8.61GB with the vision encoder) |
+| KV cache | 0.92GB (16,384 tokens, 4 requests of 4,096 tokens) |
+| Desktop display | 0.4-1.1GB (changes over time) |
 | faster-whisper (STT) | 0 (CPU only, no GPU) |
 | Piper (TTS) | 0 (CPU only, no GPU) |
 

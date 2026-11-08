@@ -105,8 +105,8 @@ kubectl delete pod gpu-test
 
 ## vLLM standalone on the PC
 
-Status: written, untested. The flags are the same provisional flags as in
-`k8s/vllm-deployment.yaml`. This step measures the real numbers and sets the final flags.
+Status: ran on WSL2 on 2026-11-08 (not on Ubuntu or EC2). The API checks passed and the VRAM was
+measured. See `docs/benchmarks.md`, section "VRAM". Repeat it on Ubuntu or EC2 for the final numbers.
 
 This step runs vLLM in Docker, outside Kubernetes, with the image that k3s uses later.
 
@@ -128,16 +128,23 @@ nvidia-smi --query-gpu=memory.used,memory.total --format=csv   # this is the "de
 
 ```bash
 docker run --rm --gpus all --ipc=host -p 8000:8000 \
-  -v "$HOME/.cache/huggingface:/root/.cache/huggingface" \
+  -v "$HOME/.cache/huggingface:/root/.cache/huggingface" -v "$HOME/.cache/vllm:/root/.cache/vllm" \
   -e NVIDIA_DISABLE_REQUIRE=true \
   vllm/vllm-openai:v0.28.0 Qwen/Qwen3.5-4B \
   --served-model-name Qwen/Qwen3.5-4B --dtype bfloat16 --language-model-only \
-  --gpu-memory-utilization 0.80 --max-model-len 4096 --max-num-seqs 4 \
+  --gpu-memory-utilization 0.89 --max-model-len 4096 --max-num-seqs 4 \
   --reasoning-parser qwen3 --default-chat-template-kwargs '{"enable_thinking": false}' \
   --enable-auto-tool-choice --tool-call-parser qwen3_coder
 ```
 
-The first start downloads the model. Wait for the log line that says the server is ready.
+The first start downloads the model (8.68 GiB). The second mount keeps the compile cache, so the next
+start is faster. Wait for the log line that says the server is ready.
+
+How to set `--gpu-memory-utilization`: vLLM refuses to start when the free VRAM is lower than
+the value times the total VRAM. The Windows desktop and other programs use VRAM, so the free VRAM
+changes. If you see `Free memory on device ... is less than desired GPU memory utilization`, lower the
+value by 0.01 (this is about 0.12 GiB less KV cache). If you see `No available memory for the cache
+blocks`, there is too little VRAM left for the KV cache. Raise the value, or lower `--max-num-seqs`.
 
 ### Check
 
@@ -169,6 +176,9 @@ Copy these numbers into `docs/benchmarks.md` (section "VRAM") and into the table
 The flag skips the vision encoder. It is on by default because VRAM is tight, but nobody
 measured it yet. Start vLLM twice, once with the flag and once without it. Write the VRAM numbers
 of both runs in `docs/benchmarks.md`. Keep the flag only if the difference is needed.
+
+Result on WSL2: without the flag the model needs 0.62 GiB more (8.61 GiB, not 7.99 GiB) and vLLM
+does not start (KV cache memory is -0.18 GiB). The flag is needed on this 12 GB GPU.
 
 ### If something does not fit
 
@@ -244,8 +254,8 @@ pins `av==15.1.0` for this reason.
 
 ## vLLM on k3s
 
-Status: written, untested. The flags in `k8s/vllm-deployment.yaml` are provisional.
-Ticket 02 must measure them on the PC first. Then update the file.
+Status: written, untested. The memory flags in `k8s/vllm-deployment.yaml` were measured in the
+standalone run on WSL2 (`--gpu-memory-utilization=0.89`). The k3s part did not run yet.
 
 Sources for the flags: the Qwen3.5-4B model card (reasoning parser `qwen3`, tool parser
 `qwen3_coder`, `--language-model-only`) and the vLLM docs (`--default-chat-template-kwargs`).

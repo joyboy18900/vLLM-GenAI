@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** written, untested. The runbook has the commands and the fallbacks. Nothing was measured. The VRAM table in CLAUDE.md still shows estimates.
+**Test status:** ran on WSL2 on 2026-11-08 (not on Ubuntu, so no box is ticked). vLLM v0.28.0 serves Qwen3.5-4B in bf16. The API checks, thinking off, and tool calling passed. VRAM is measured (see `docs/benchmarks.md`). The final flag is `--gpu-memory-utilization 0.89`. Repeat on Ubuntu or EC2.
 
 - [ ] vLLM version pinned, Qwen3.5-4B served in bf16 through the OpenAI-compatible API
 - [ ] Thinking mode off by default, tool calling enabled with the correct parser for the model
