@@ -185,6 +185,8 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check
    the differences in "If you run on EC2" (fp8 and bf16 support, VRAM, quota, cost).
 
+The values of the Kubernetes files, the speech servers, and the benchmark runs equal the reference project, except the ones listed in `docs/setup.md` (section "Values that differ from the reference project").
+
 After each run: tick the boxes of the tickets that passed, update the status tables (this README,
 `docs/setup.md`, `docs/benchmarks.md`), and put the final vLLM flags in `k8s/vllm-deployment.yaml`.
 

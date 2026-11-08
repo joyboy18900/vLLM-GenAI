@@ -521,15 +521,20 @@ Status: the Python scripts ran against a fake server and fake data on a Mac (log
 `bench/run.sh` is written, untested. It needs the real cluster.
 
 `bench/run.sh <label>` runs `vllm bench serve` inside the vLLM pod for three workloads at
-concurrency 1, 8, and 16: random tokens (engine only), real chat text, and a long shared prefix
-(prefix caching). It uses a fixed seed and 3 warmup requests. The flags come from the vLLM v0.28.0
-source. Raw JSON goes to `bench/results/<label>/`.
+concurrency 1, 8, and 16. The parameters are the same as in the reference project: seed 0, 3 warmup
+requests, 24, 96, and 160 prompts for concurrency 1, 8, and 16, and `--ignore-eos`. The workloads are
+random tokens (input 512, output 128, engine only), chat text (output 128), and a shared prefix
+(prefix 1024, input 256, output 128, prefix caching, concurrency 1 and 8 only). The reference uses the
+ShareGPT file for the chat text. This project uses its own 28 prompts in `bench/prompts`, because the
+file needs a download. The flags come from the vLLM v0.28.0 source. Raw JSON goes to
+`bench/results/<label>/`. With `--max-num-seqs 4` the runs at concurrency 8 and 16 queue requests.
+Read the queue time and do not take it as a failure of a lever.
 
 ```bash
 bench/run.sh baseline
 python3 bench/summarize.py baseline                # table, saved as summary.md
 kubectl port-forward svc/vllm 8000:8000 &          # for the quality check
-python3 bench/quality_check.py --label baseline    # 14 English and Thai prompts at temperature 0
+python3 bench/quality_check.py --label baseline    # 14 English and Thai prompts, temperature 0, 256 tokens
 ```
 
 Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, and flags.
@@ -813,3 +818,32 @@ in this runbook stay the same. Check these differences first.
    Open `http://localhost:8080` (web UI) and `http://localhost:3000` (Grafana).
 7. **Stop.** Use "Stop instance" when you finish. The disk stays and costs a small amount. Use
    "Terminate" only when you want to delete everything. Deploy again with the same files.
+
+## Values that differ from the reference project
+
+All values of the Kubernetes files, the speech servers, and the benchmark runs equal the reference
+project, except the ones in this table. Each difference has a reason. The environment names of the
+speech servers also differ (`STT_*` and `TTS_*` here, `WHISPER_*` and `PIPER_*` there). The values
+behind them are equal.
+
+| Value | Reference | This project | Why |
+|---|---|---|---|
+| Model and served name | Qwen2.5-3B-Instruct | Qwen3.5-4B | the spec |
+| `--dtype` | float16 | bfloat16 | the T4 has no bf16. The RTX 4070 SUPER has it, and the spec chooses bf16 |
+| Tool-call parser, reasoning parser, thinking | hermes, none, none | qwen3_coder, qwen3, thinking off | these belong to the model |
+| `--language-model-only` | not used | on | measured: without it vLLM does not start (KV cache memory -0.18 GiB) |
+| `--gpu-memory-utilization` | 0.80 | 0.89 | measured: 0.80 leaves no KV cache (-0.15 GiB), 0.90 is refused at the start |
+| `--max-model-len`, `--max-num-seqs` | 8192, 16 | 4096, 4 | not tested at the reference values on this model. The KV cache holds 16,384 tokens |
+| Chunked prefill, `--max-num-batched-tokens=2048`, n-gram speculative decoding | on | off in the baseline | these are levers (ticket 13). They are measured one by one |
+| Container images | the Python image, packages installed at the start | built images, pinned versions | the spec |
+| Open WebUI image | `main` | `v0.13.0` | the spec says pinned |
+| Open WebUI `ENABLE_PERSISTENT_CONFIG` | not set | false | the manifest stays the source of the settings |
+| Storage | hostPath on `/mnt/data` | PersistentVolumeClaims (local-path) | the spec |
+| Grafana access | anonymous admin | login with a Secret, non-root user | ticket 07 asks for a login |
+| Prometheus user | root | non-root (65534) | PVC, and a safer default |
+| Web UI Service | `open-webui`, NodePort 30080 | `webui` (ClusterIP) and `webui-nodeport` (30080) | the Service names of the spec |
+| Piper | the 2023 binary release | `piper-tts` 1.8.0 (pip) | built image |
+| NVIDIA device plugin | v0.17.4 | v0.20.1 | seen to detect WSL2 |
+| Chat prompts of the benchmark | ShareGPT file | own 28 prompts | no download needed |
+| Quality prompts | 12 Thai prompts | 14 English and Thai prompts | English first |
+
