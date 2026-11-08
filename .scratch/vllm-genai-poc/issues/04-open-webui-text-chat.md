@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** written, untested. Manifest written. Schema checked with kubeconform only. Image pinned to v0.13.0.
+**Test status:** deployed on WSL2 on 2026-11-08. The pod is ready and `/health` returns 200 through the Service. The chat in the browser and the restart check are not tested. No box is ticked.
 
 - [ ] Open WebUI image pinned to a version
 - [ ] Configured by environment variables to use the `vllm` Service; Ollama off; first boot kept light (no auto model updates, no web search)

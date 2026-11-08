@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** written, untested. Manifests written. Flags are provisional until ticket 02. Schema checked with kubeconform only.
+**Test status:** applied on WSL2 on 2026-11-08. The Deployment, Service, and PVC were created. The result of the pod start was not seen (the SSH connection dropped). No box is ticked. Memory flags measured in ticket 02.
 
 - [ ] Deployment uses the flags chosen in ticket 02, requests one GPU, uses the `nvidia` RuntimeClass and the Recreate strategy
 - [ ] Service links disabled on the pod (prevents the `VLLM_PORT` collision)

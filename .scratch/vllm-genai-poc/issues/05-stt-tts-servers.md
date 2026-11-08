@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** servers tested in Docker on a Mac (arm64). k3s parts written, untested.
+**Test status:** servers tested in Docker on a Mac (arm64). On WSL2 (2026-11-08) the k3s deploy passed: pods ready, PVCs bound, round trip in the cluster returned "Hello World!", `/metrics` reachable. Two boxes ticked earlier stay as they are. The other boxes wait for Ubuntu or EC2.
 
 - [x] STT server: `/v1/audio/transcriptions` and `/health`, faster-whisper on CPU (English model, int8, greedy decoding, fixed language, VAD filter, no previous-text conditioning), settings from environment variables
 - [x] TTS server: `/v1/audio/speech` and `/health`, Piper on CPU, English voice, no trailing sentence silence, serialized synthesis

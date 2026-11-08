@@ -201,8 +201,10 @@ Press `Ctrl-C`. Then run `nvidia-smi`. The GPU memory must be free (only the des
 
 ## Speech servers (STT and TTS)
 
-Status: the servers and images were tested on a Mac (Docker, arm64). The k3s
-manifest is written, untested. Rebuild the images on the x86 machine before you deploy.
+Status: the servers and images were tested on a Mac (Docker, arm64). The k3s deploy ran on WSL2
+on 2026-11-08 (x86 images built in WSL2): both pods became ready, both PVCs were bound, the round
+trip in the cluster returned "Hello World!", and `/health` and `/metrics` answered through the
+Services. Rebuild the images on the x86 machine before you deploy.
 
 ### Build the images
 
@@ -254,8 +256,11 @@ pins `av==15.1.0` for this reason.
 
 ## vLLM on k3s
 
-Status: written, untested. The memory flags in `k8s/vllm-deployment.yaml` were measured in the
-standalone run on WSL2 (`--gpu-memory-utilization=0.89`). The k3s part did not run yet.
+Status: applied on WSL2 on 2026-11-08, result not seen. The memory flags in `k8s/vllm-deployment.yaml`
+were measured in the standalone run on WSL2 (`--gpu-memory-utilization=0.89`). The Deployment,
+the Service, and the PVC were created. The SSH connection dropped while the script waited for the
+pod, so the start of the pod, the chat completion through the Service, and the restart check are
+not tested. The vLLM image was imported into k3s from Docker in 211 s.
 
 Sources for the flags: the Qwen3.5-4B model card (reasoning parser `qwen3`, tool parser
 `qwen3_coder`, `--language-model-only`) and the vLLM docs (`--default-chat-template-kwargs`).
@@ -292,7 +297,9 @@ kubectl logs deploy/vllm-qwen | grep -i download   # expected: no new download
 
 ## Open WebUI text chat
 
-Status: written, untested.
+Status: deployed on WSL2 on 2026-11-08. The pod became ready (about 3 minutes, with the image
+pull) and `/health` returned 200 through the Service `webui`. Not tested: the chat in the browser
+(streaming) and the chat history after a restart.
 
 ### Deploy
 
@@ -743,6 +750,11 @@ kubectl -n monitoring port-forward svc/grafana 3000:3000   # http://localhost:30
 | k3s v1.37.2+k3s1 | Node `Ready`. The NVIDIA runtime is in the containerd config. |
 | Device plugin v0.20.1 | Log says `Detected platform: wsl`. The node reports `nvidia.com/gpu: 1`. |
 | `k8s/gpu-test.yaml` | The pod ran `nvidia-smi` and ended with `Succeeded`. |
+| vLLM standalone (Docker) | Serves Qwen3.5-4B. API, thinking off, and tool call passed. See `docs/benchmarks.md`. |
+| Speech pods on k3s | Ready in 27 s. Round trip in the cluster returned "Hello World!". `/metrics` reachable. |
+| Open WebUI on k3s | Pod ready. `/health` returned 200 through the Service. |
+| Images into k3s | `docker save <image> \| k3s ctr images import -` (the vLLM image, 28.8 GB, took 211 s). |
+| vLLM on k3s, monitoring | Applied. Result not seen (the SSH connection dropped). Check these first when you continue. |
 
 ### If the node shows no GPU
 
