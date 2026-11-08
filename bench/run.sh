@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 # Run `vllm bench serve` for three workloads at concurrency 1, 8, and 16.
+# The parameters are the same as in the reference project (bench/orchestrate.py there):
+#   random   workload A: random tokens, input 512, output 128 (engine only)
+#   chat     workload C: chat text, output 128 (the reference uses ShareGPT, we use our own prompts)
+#   prefix   workload B: shared prefix 1024, input 256, output 128 (prefix caching), concurrency 1 and 8
 # The command runs inside the vLLM pod, so it measures the engine without network noise.
 # The benchmark shares the pod CPU with the server. Do not run other work at the same time.
 #
@@ -11,10 +15,13 @@ set -euo pipefail
 
 LABEL="${1:?usage: bench/run.sh <label>}"
 MODEL="${MODEL:-Qwen/Qwen3.5-4B}"
-NUM_PROMPTS="${NUM_PROMPTS:-64}"
-SEED="${SEED:-42}"
+SEED="${SEED:-0}"
 WARMUPS="${WARMUPS:-3}"
 CONCURRENCIES="${CONCURRENCIES:-1 8 16}"
+
+nprompts() { # prompts per concurrency level, as in the reference. NUM_PROMPTS overrides all levels.
+  case "$1" in 1) echo 24 ;; 8) echo 96 ;; 16) echo 160 ;; *) echo 64 ;; esac
+}
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="$HERE/results/$LABEL"
@@ -25,27 +32,28 @@ echo "pod: $POD  label: $LABEL"
 kubectl exec "$POD" -- mkdir -p "$REMOTE" /tmp/bench-data
 kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/chat_prompts.jsonl' < "$HERE/prompts/chat_prompts.jsonl"
 
-bench() { # name, then the dataset flags
-  local name="$1"; shift
+bench() { # name, concurrency, then the workload flags
+  local name="$1" c="$2"; shift 2
   kubectl exec "$POD" -- vllm bench serve \
-    --backend openai-chat --endpoint /v1/chat/completions \
-    --base-url http://localhost:8000 --model "$MODEL" \
-    --num-prompts "$NUM_PROMPTS" --num-warmups "$WARMUPS" --seed "$SEED" \
-    --save-result --result-dir "$REMOTE" --result-filename "$name.json" "$@"
+    --base-url http://localhost:8000 --model "$MODEL" --tokenizer "$MODEL" \
+    --seed "$SEED" --num-warmups "$WARMUPS" \
+    --max-concurrency "$c" --num-prompts "${NUM_PROMPTS:-$(nprompts "$c")}" \
+    --percentile-metrics ttft,tpot,itl,e2el --metric-percentiles 50,99 \
+    --save-result --result-dir "$REMOTE" --result-filename "${name}_c${c}.json" "$@"
 }
 
 for c in $CONCURRENCIES; do
-  # engine only: random tokens
-  bench "random_c$c" --max-concurrency "$c" \
-    --dataset-name random --random-input-len 256 --random-output-len 128
-  # real chat text
-  bench "chat_c$c" --max-concurrency "$c" \
-    --dataset-name custom --dataset-path /tmp/bench-data/chat_prompts.jsonl --custom-output-len 128
-  # long shared prefix: shows the effect of prefix caching
-  bench "prefix_c$c" --max-concurrency "$c" \
-    --dataset-name prefix_repetition --prefix-repetition-prefix-len 1024 \
-    --prefix-repetition-suffix-len 64 --prefix-repetition-num-prefixes 4 \
-    --prefix-repetition-output-len 64
+  bench random "$c" \
+    --dataset-name random --random-input-len 512 --random-output-len 128 --random-prefix-len 0 \
+    --ignore-eos --backend openai --endpoint /v1/completions
+  bench chat "$c" \
+    --dataset-name custom --dataset-path /tmp/bench-data/chat_prompts.jsonl --custom-output-len 128 \
+    --ignore-eos --backend openai-chat --endpoint /v1/chat/completions
+  case "$c" in 1|8)
+    bench prefix "$c" \
+      --dataset-name random --random-prefix-len 1024 --random-input-len 256 --random-output-len 128 \
+      --ignore-eos --backend openai --endpoint /v1/completions ;;
+  esac
 done
 
 mkdir -p "$OUT"

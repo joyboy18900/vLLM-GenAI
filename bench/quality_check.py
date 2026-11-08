@@ -23,7 +23,7 @@ def ask(base_url, model, prompt, timeout):
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-        "max_tokens": 128,
+        "max_tokens": 256,
         "seed": 42,
     }).encode()
     req = urllib.request.Request(

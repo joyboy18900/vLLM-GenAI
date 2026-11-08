@@ -15,7 +15,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from faster_whisper import WhisperModel
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
-MODEL = os.getenv("STT_MODEL", "small.en")
+MODEL = os.getenv("STT_MODEL", "small")
 DEVICE = os.getenv("STT_DEVICE", "cpu")
 COMPUTE_TYPE = os.getenv("STT_COMPUTE_TYPE", "int8")
 CPU_THREADS = int(os.getenv("STT_CPU_THREADS", "0"))  # 0: the library chooses
