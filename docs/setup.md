@@ -597,6 +597,96 @@ After you choose a voice, the work is: let `speech/tts/server.py` pick the voice
 `voice` field of the request, add the voice to the voices folder, and set `AUDIO_TTS_VOICE` in
 Open WebUI. Do that only after the choice.
 
+## Rehearsal on WSL2 (before the real test)
+
+Status: written, untested. A first run in WSL2 on the PC finds most mistakes early. WSL2 is not
+bare-metal Linux, so write every result of this run as "tested on WSL2". It does not replace the
+test on Ubuntu or on EC2. The test on Ubuntu or EC2 stays required for the parts that differ.
+
+### What is different in WSL2
+
+| Topic | WSL2 | What to do |
+|---|---|---|
+| GPU driver | The Windows driver gives the GPU to WSL2. | Do not install a Linux driver. Skip step 1 of "PC as a GPU node". `nvidia-smi` must work inside WSL2. |
+| Memory | WSL2 uses half of the RAM by default. | Set the limit in `.wslconfig` (below). |
+| Services | k3s needs systemd. | Turn on systemd (below). |
+| Docker | Docker Desktop with its own Kubernetes breaks the GPU in the cluster. | Install `docker.io` inside WSL2 (step 3 of "PC as a GPU node"). Do not use Docker Desktop. |
+| Device plugin | WSL support was added to the plugin in 2026 (pull request 1671). It was not confirmed for v0.20.1. | If the node shows no `nvidia.com/gpu`, see the failure list below. |
+| DCGM exporter | Not confirmed on WSL2. | If the pod fails or shows no GPU data, mark the GPU row of the dashboard and the `dcgm` target as "not testable on WSL2". |
+| Network | NAT. A NodePort can be unreachable from Windows. | Use `kubectl port-forward` (below). Do not test the HTTPS Ingress here. |
+| Numbers | Windows can still use the GPU. | VRAM and benchmark numbers are not final. |
+
+### Prepare Windows and WSL2
+
+1. Install the latest NVIDIA driver for Windows.
+2. In PowerShell, install Ubuntu (check the name with `wsl --list --online`):
+   ```powershell
+   wsl --install -d Ubuntu-24.04
+   ```
+3. Set the memory limit. Make the file `%UserProfile%\.wslconfig`:
+   ```
+   [wsl2]
+   memory=24GB
+   swap=8GB
+   ```
+4. In the Ubuntu terminal, turn on systemd, then restart WSL2:
+   ```bash
+   printf "[boot]\nsystemd=true\n" | sudo tee /etc/wsl.conf
+   ```
+   ```powershell
+   wsl --shutdown
+   ```
+5. Check the GPU inside WSL2: `nvidia-smi` must show the RTX 4070 SUPER.
+
+### Get the code into WSL2 without a push
+
+Nothing goes to GitHub. On the Mac:
+
+```bash
+cd ~/Workspaces/Code/vLLM/vLLM-GenAI
+git bundle create /tmp/vllm-genai.bundle --all
+```
+
+Move the file to the PC (USB, a shared folder, or any file copy). In WSL2:
+
+```bash
+git clone /path/to/vllm-genai.bundle vLLM-GenAI
+```
+
+### Run the steps
+
+Run every command in the WSL2 terminal, with `kubectl` inside WSL2. There is no `KUBECONFIG` step.
+Follow the sections in this order, with the changes from the table above:
+
+1. "PC as a GPU node": skip step 1, do steps 2 to 6.
+2. "vLLM standalone on the PC".
+3. "Speech servers", "vLLM on k3s", "Open WebUI text chat", "Voice mode".
+4. "Core monitoring", "Logs with Loki", "Alerts with Alertmanager".
+5. "Benchmark harness" and "Full smoke test" with `sh bench/smoke_test.sh --no-https`. The check for the
+   target `dcgm` can fail on WSL2. That is expected if DCGM does not work there.
+
+Open the pages with port-forward, in two terminals. Then open them in the Windows browser.
+The address is `localhost`, so the microphone works:
+
+```bash
+kubectl port-forward svc/webui 8080:8080       # http://localhost:8080
+kubectl -n monitoring port-forward svc/grafana 3000:3000   # http://localhost:3000
+```
+
+### If the node shows no GPU
+
+1. `kubectl -n kube-system logs ds/nvidia-device-plugin-daemonset`. Read the first error lines.
+2. Check that the pod uses `runtimeClassName: nvidia` (the file does).
+3. Try a newer device plugin tag or the build from the main branch. Change the image in
+   `k8s/nvidia-device-plugin.yaml`, and write the version that works in this file.
+4. If nothing works, write the error in this file and stop the GPU part of the rehearsal. The
+   parts that do not need the GPU (speech, Open WebUI, monitoring, logs, alerts) still run.
+
+### Record the result
+
+Write what passed and what failed, with the label "WSL2", in the section of each step. Keep the
+list of "not testable on WSL2" items. Repeat only those items on Ubuntu or on EC2.
+
 ## If you run on EC2
 
 The local PC is the main machine. You can run the same stack on a rented GPU machine. The steps
