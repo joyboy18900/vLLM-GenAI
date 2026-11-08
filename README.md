@@ -173,28 +173,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 
 ## What is left
 
-The code and the documents are written. What is left is to run and check the stack, in three runs.
-Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
-
-1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods,
-   and the Open WebUI pod. Left: vLLM with Qwen2.5-3B-Instruct, standalone and on k3s (VRAM and KV cache, start, a chat through the Service, a restart
-   without a new download), the monitoring pods (DCGM may not work on WSL2), chat and voice in the
-   browser, the benchmark and the levers (to choose the final vLLM flags), and the smoke test.
-   The copy of the project on the PC and the Deployments in k3s are older than this repository (they
-   still use the first model). Send the project again and apply the manifests again before you start
-   (see "Get the code into WSL2 without a push" in `docs/setup.md`).
-2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
-   cannot: DCGM, the HTTPS Ingress, and the NodePort. Fill the PC spec table again.
-3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check
-   the differences in "If you run on EC2" (fp8 and bf16 support, VRAM, quota, cost).
-
-
-After each run: tick the boxes of the tickets that passed, update the status tables (this README,
-`docs/setup.md`, `docs/benchmarks.md`), and put the final vLLM flags in `k8s/vllm-deployment.yaml`.
-
-Small items that are not test runs:
-- Make `docs/workflow.png` again: fix the arrows in the monitoring box and the model name in the vLLM box (the notes are in ticket 16).
-- Thai TTS (bonus): run `bench/thai_tts`, listen, and choose a voice (ticket 18).
-- When the PC runs are over, remove the SSH access (see "Remote access" in `docs/setup.md`).
+See [`docs/what-is-left.md`](docs/what-is-left.md). It lists the test runs that are left, the small
+items, and what a new session needs to know.
 
 > This project is for practice of infra and scheduling. It is not a production system.
