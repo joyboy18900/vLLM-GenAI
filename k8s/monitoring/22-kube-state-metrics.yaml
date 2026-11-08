@@ -1,4 +1,5 @@
 # kube-state-metrics: pod phase, restarts, and Deployment state as metrics.
+# It collects only the resources that the dashboard needs. It has no access to Secrets.
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -12,22 +13,10 @@ metadata:
   name: kube-state-metrics
 rules:
   - apiGroups: [""]
-    resources: [configmaps, secrets, nodes, pods, services, resourcequotas, replicationcontrollers, limitranges, persistentvolumeclaims, persistentvolumes, namespaces, endpoints]
+    resources: [pods, nodes, namespaces, persistentvolumeclaims]
     verbs: [list, watch]
   - apiGroups: [apps]
-    resources: [statefulsets, daemonsets, deployments, replicasets]
-    verbs: [list, watch]
-  - apiGroups: [batch]
-    resources: [cronjobs, jobs]
-    verbs: [list, watch]
-  - apiGroups: [autoscaling]
-    resources: [horizontalpodautoscalers]
-    verbs: [list, watch]
-  - apiGroups: [networking.k8s.io]
-    resources: [ingresses, networkpolicies]
-    verbs: [list, watch]
-  - apiGroups: [storage.k8s.io]
-    resources: [storageclasses, volumeattachments]
+    resources: [deployments, daemonsets]
     verbs: [list, watch]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -63,6 +52,9 @@ spec:
         - name: kube-state-metrics
           image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0
           imagePullPolicy: IfNotPresent
+          args:
+            # Collect only what the dashboard uses. The role above matches this list.
+            - --resources=pods,deployments,daemonsets,nodes,namespaces,persistentvolumeclaims
           ports:
             - name: metrics
               containerPort: 8080
