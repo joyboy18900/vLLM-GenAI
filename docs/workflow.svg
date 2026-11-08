@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1060" viewBox="0 0 1800 1060" font-family="Helvetica, Arial, sans-serif">
+<defs>
+<marker id="m-black" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#222"/></marker>
+<marker id="m-blue" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f66d0"/></marker>
+<marker id="m-pink" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d6456b"/></marker>
+<marker id="m-purple" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a4fd1"/></marker>
+<marker id="m-green" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e8b57"/></marker>
+<marker id="m-orange" viewBox="0 0 10 10" refX="9" refY="5" markerUnits="userSpaceOnUse" markerWidth="13" markerHeight="13" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#f08a1c"/></marker>
+</defs>
+<rect width="1800" height="1060" fill="#ffffff"/>
+<text x="30" y="48" font-size="36" font-weight="700" fill="#222" text-anchor="start">AI Voice Chat System on k3s (Single Node, 1 GPU)</text>
+<text x="30" y="82" font-size="20" font-weight="400" fill="#333" text-anchor="start">Workflow: User > Open WebUI > vLLM + STT + TTS > Response   |   Monitoring covers the whole system</text>
+<rect x="30" y="120" width="200" height="100" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<circle cx="52" cy="140" r="15" fill="#2e8b57"/>
+<text x="52" y="146" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<text x="130" y="160" font-size="22" font-weight="700" fill="#2e8b57" text-anchor="middle">User</text>
+<text x="130" y="190" font-size="16" font-weight="400" fill="#333" text-anchor="middle">types or speaks</text>
+<rect x="30" y="260" width="200" height="120" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<text x="130" y="292" font-size="19" font-weight="700" fill="#2e8b57" text-anchor="middle">Ingress (Traefik)</text>
+<text x="130" y="322" font-size="16" font-weight="400" fill="#222" text-anchor="middle">:443 HTTPS (local CA)</text>
+<text x="130" y="350" font-size="15" font-weight="400" fill="#666" text-anchor="middle">or SSH tunnel to :30080</text>
+<rect x="30" y="430" width="200" height="110" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<circle cx="52" cy="450" r="15" fill="#2e8b57"/>
+<text x="52" y="456" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<text x="130" y="485" font-size="21" font-weight="700" fill="#2e8b57" text-anchor="middle">Open WebUI</text>
+<text x="130" y="515" font-size="17" font-weight="400" fill="#222" text-anchor="middle">:8080</text>
+<path d="M130,220 V260" fill="none" stroke="#222" stroke-width="2.4" marker-end="url(#m-black)"/>
+<path d="M130,380 V430" fill="none" stroke="#222" stroke-width="2.4" marker-end="url(#m-black)"/>
+<rect x="270" y="110" width="1180" height="690" rx="14" fill="#f6f9ff" stroke="#2f66d0" stroke-width="2.2" stroke-dasharray="10 7"/>
+<circle cx="310" cy="142" r="20" fill="#2f66d0"/>
+<text x="310" y="150" font-size="14" font-weight="700" fill="#fff" text-anchor="middle">k8s</text>
+<text x="345" y="150" font-size="24" font-weight="700" fill="#2f66d0" text-anchor="start">k3s Cluster (Single Node)</text>
+<rect x="320" y="185" width="270" height="110" rx="12" fill="#e9f0fd" stroke="#2f66d0" stroke-width="2"/>
+<circle cx="342" cy="205" r="15" fill="#2f66d0"/>
+<text x="342" y="211" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<text x="470" y="230" font-size="19" font-weight="700" fill="#2f66d0" text-anchor="middle">vLLM (LLM Inference)</text>
+<text x="455" y="258" font-size="16" font-weight="400" fill="#222" text-anchor="middle">Qwen3.5-4B, bf16</text>
+<text x="455" y="282" font-size="16" font-weight="400" fill="#222" text-anchor="middle">:8000</text>
+<rect x="640" y="185" width="200" height="110" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<text x="740" y="222" font-size="19" font-weight="700" fill="#2e8b57" text-anchor="middle">GPU</text>
+<text x="740" y="250" font-size="15" font-weight="400" fill="#222" text-anchor="middle">NVIDIA RTX 4070 SUPER</text>
+<text x="740" y="274" font-size="15" font-weight="400" fill="#222" text-anchor="middle">12 GB VRAM</text>
+<path d="M590,240 H640" fill="none" stroke="#222" stroke-width="2.4" marker-end="url(#m-black)" marker-start="url(#m-black)"/>
+<rect x="320" y="350" width="230" height="100" rx="12" fill="#fdebf0" stroke="#d6456b" stroke-width="2"/>
+<circle cx="342" cy="370" r="15" fill="#d6456b"/>
+<text x="342" y="376" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="435" y="408" font-size="18" font-weight="700" fill="#d6456b" text-anchor="middle">STT (faster-whisper)</text>
+<text x="435" y="433" font-size="15" font-weight="400" fill="#222" text-anchor="middle">CPU, int8   :8000</text>
+<rect x="600" y="350" width="230" height="100" rx="12" fill="#fdebf0" stroke="#d6456b" stroke-width="2"/>
+<circle cx="622" cy="370" r="15" fill="#d6456b"/>
+<text x="622" y="376" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="715" y="408" font-size="18" font-weight="700" fill="#d6456b" text-anchor="middle">TTS (Piper)</text>
+<text x="715" y="433" font-size="15" font-weight="400" fill="#222" text-anchor="middle">CPU   :8000</text>
+<rect x="320" y="540" width="520" height="110" rx="12" fill="#f1ebfc" stroke="#7a4fd1" stroke-width="2"/>
+<circle cx="342" cy="560" r="15" fill="#7a4fd1"/>
+<text x="342" y="566" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+<text x="580" y="575" font-size="18" font-weight="700" fill="#7a4fd1" text-anchor="middle">Internal Networking (ClusterIP Services)</text>
+<rect x="350" y="595" width="100" height="36" rx="8" fill="#e2d6f8" stroke="#7a4fd1" stroke-width="1.5"/>
+<text x="400" y="619" font-size="16" font-weight="700" fill="#7a4fd1" text-anchor="middle">webui</text>
+<rect x="470" y="595" width="100" height="36" rx="8" fill="#e2d6f8" stroke="#7a4fd1" stroke-width="1.5"/>
+<text x="520" y="619" font-size="16" font-weight="700" fill="#7a4fd1" text-anchor="middle">vllm</text>
+<rect x="590" y="595" width="100" height="36" rx="8" fill="#e2d6f8" stroke="#7a4fd1" stroke-width="1.5"/>
+<text x="640" y="619" font-size="16" font-weight="700" fill="#7a4fd1" text-anchor="middle">stt</text>
+<rect x="710" y="595" width="100" height="36" rx="8" fill="#e2d6f8" stroke="#7a4fd1" stroke-width="1.5"/>
+<text x="760" y="619" font-size="16" font-weight="700" fill="#7a4fd1" text-anchor="middle">tts</text>
+<path d="M230,455 H300 V240 H320" fill="none" stroke="#2f66d0" stroke-width="3" marker-end="url(#m-blue)"/>
+<text x="330" y="318" font-size="15" font-weight="600" fill="#2f66d0" text-anchor="start">Chat completion (OpenAI API, streaming)</text>
+<path d="M230,500 H435 V450" fill="none" stroke="#d6456b" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-pink)"/>
+<path d="M435,500 H715 V450" fill="none" stroke="#d6456b" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-pink)"/>
+<text x="290" y="522" font-size="14" font-weight="600" fill="#d6456b" text-anchor="start">audio (optional)</text>
+<path d="M320,605 H130 V540" fill="none" stroke="#7a4fd1" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-purple)"/>
+<rect x="880" y="130" width="550" height="640" rx="14" fill="#fff4e4" stroke="#f08a1c" stroke-width="2.2" stroke-dasharray="10 7"/>
+<circle cx="902" cy="152" r="15" fill="#f08a1c"/>
+<text x="902" y="158" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">6</text>
+<text x="930" y="160" font-size="21" font-weight="700" fill="#f08a1c" text-anchor="start">Monitoring &amp; Observability</text>
+<text x="930" y="184" font-size="15" font-weight="400" fill="#666" text-anchor="start">covers the whole cluster</text>
+<rect x="900" y="205" width="250" height="545" rx="10" fill="#fff" stroke="#f08a1c" stroke-width="1.6"/>
+<text x="1025" y="232" font-size="16" font-weight="700" fill="#f08a1c" text-anchor="middle">Exporters / Metrics Sources</text>
+<circle cx="935" cy="270" r="22" fill="#fff" stroke="#f08a1c" stroke-width="2"/>
+<text x="935" y="277" font-size="20" font-weight="700" fill="#f08a1c" text-anchor="middle">•</text>
+<text x="970" y="268" font-size="16" font-weight="600" fill="#222" text-anchor="start">vLLM metrics</text>
+<text x="970" y="290" font-size="14" font-weight="400" fill="#555" text-anchor="start">/metrics</text>
+<circle cx="935" cy="348" r="22" fill="#fff" stroke="#f08a1c" stroke-width="2"/>
+<text x="935" y="355" font-size="20" font-weight="700" fill="#f08a1c" text-anchor="middle">•</text>
+<text x="970" y="346" font-size="16" font-weight="600" fill="#222" text-anchor="start">STT metrics</text>
+<text x="970" y="368" font-size="14" font-weight="400" fill="#555" text-anchor="start">/metrics</text>
+<circle cx="935" cy="426" r="22" fill="#fff" stroke="#f08a1c" stroke-width="2"/>
+<text x="935" y="433" font-size="20" font-weight="700" fill="#f08a1c" text-anchor="middle">•</text>
+<text x="970" y="424" font-size="16" font-weight="600" fill="#222" text-anchor="start">TTS metrics</text>
+<text x="970" y="446" font-size="14" font-weight="400" fill="#555" text-anchor="start">/metrics</text>
+<circle cx="935" cy="504" r="22" fill="#fff" stroke="#f08a1c" stroke-width="2"/>
+<text x="935" y="511" font-size="20" font-weight="700" fill="#f08a1c" text-anchor="middle">•</text>
+<text x="970" y="502" font-size="16" font-weight="600" fill="#222" text-anchor="start">Node Exporter</text>
+<text x="970" y="524" font-size="14" font-weight="400" fill="#555" text-anchor="start">CPU, RAM, disk  :9100</text>
+<circle cx="935" cy="582" r="22" fill="#fff" stroke="#f08a1c" stroke-width="2"/>
+<text x="935" y="589" font-size="20" font-weight="700" fill="#f08a1c" text-anchor="middle">•</text>
+<text x="970" y="580" font-size="16" font-weight="600" fill="#222" text-anchor="start">DCGM Exporter</text>
+<text x="970" y="602" font-size="14" font-weight="400" fill="#555" text-anchor="start">GPU  :9400</text>
+<circle cx="935" cy="660" r="22" fill="#fff" stroke="#f08a1c" stroke-width="2"/>
+<text x="935" y="667" font-size="20" font-weight="700" fill="#f08a1c" text-anchor="middle">•</text>
+<text x="970" y="658" font-size="16" font-weight="600" fill="#222" text-anchor="start">kube-state-metrics</text>
+<text x="970" y="680" font-size="14" font-weight="400" fill="#555" text-anchor="start">pods, nodes  :8080</text>
+<rect x="1190" y="205" width="220" height="95" rx="10" fill="#fff" stroke="#f08a1c" stroke-width="1.6"/>
+<text x="1300" y="242" font-size="19" font-weight="700" fill="#f08a1c" text-anchor="middle">Prometheus</text>
+<text x="1300" y="270" font-size="14" font-weight="400" fill="#444" text-anchor="middle">:9090  (alert rules)</text>
+<rect x="1190" y="345" width="220" height="95" rx="10" fill="#fff" stroke="#f08a1c" stroke-width="1.6"/>
+<text x="1300" y="382" font-size="19" font-weight="700" fill="#f08a1c" text-anchor="middle">Alertmanager</text>
+<text x="1300" y="410" font-size="14" font-weight="400" fill="#444" text-anchor="middle">:9093</text>
+<rect x="1190" y="485" width="220" height="105" rx="10" fill="#fff" stroke="#f08a1c" stroke-width="1.6"/>
+<text x="1300" y="520" font-size="19" font-weight="700" fill="#f08a1c" text-anchor="middle">Loki</text>
+<text x="1300" y="546" font-size="14" font-weight="400" fill="#444" text-anchor="middle">:3100  logs</text>
+<text x="1300" y="570" font-size="14" font-weight="400" fill="#444" text-anchor="middle">collected by Alloy</text>
+<rect x="1190" y="635" width="220" height="105" rx="10" fill="#fff" stroke="#f08a1c" stroke-width="1.6"/>
+<text x="1300" y="672" font-size="19" font-weight="700" fill="#f08a1c" text-anchor="middle">Grafana</text>
+<text x="1300" y="700" font-size="14" font-weight="400" fill="#444" text-anchor="middle">:3000  dashboards</text>
+<text x="1300" y="722" font-size="13" font-weight="400" fill="#444" text-anchor="middle">reads Prometheus and Loki</text>
+<path d="M1150,252 H1190" fill="none" stroke="#f08a1c" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-orange)"/>
+<path d="M1300,300 V345" fill="none" stroke="#f08a1c" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-orange)"/>
+<path d="M1300,590 V635" fill="none" stroke="#f08a1c" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-orange)"/>
+<path d="M1410,252 H1425 V687 H1410" fill="none" stroke="#f08a1c" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-orange)"/>
+<path d="M840,240 H880" fill="none" stroke="#f08a1c" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-orange)"/>
+<rect x="320" y="850" width="300" height="110" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<circle cx="342" cy="870" r="15" fill="#2e8b57"/>
+<text x="342" y="876" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+<text x="470.0" y="905" font-size="19" font-weight="700" fill="#2e8b57" text-anchor="middle">Hugging Face</text>
+<text x="470.0" y="934" font-size="15" font-weight="400" fill="#222" text-anchor="middle">model weights</text>
+<rect x="660" y="850" width="300" height="110" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<circle cx="682" cy="870" r="15" fill="#2e8b57"/>
+<text x="682" y="876" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+<text x="810.0" y="905" font-size="19" font-weight="700" fill="#2e8b57" text-anchor="middle">Container registries</text>
+<text x="810.0" y="934" font-size="15" font-weight="400" fill="#222" text-anchor="middle">Docker Hub, GHCR, NVIDIA</text>
+<rect x="1000" y="850" width="420" height="110" rx="12" fill="#eaf6ef" stroke="#2e8b57" stroke-width="2"/>
+<circle cx="1022" cy="870" r="15" fill="#2e8b57"/>
+<text x="1022" y="876" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+<text x="1210.0" y="905" font-size="19" font-weight="700" fill="#2e8b57" text-anchor="middle">Persistent Storage</text>
+<text x="1210.0" y="934" font-size="13" font-weight="400" fill="#222" text-anchor="middle">PVC (local-path): models, caches, chat history, metrics, logs</text>
+<path d="M470,850 V650" fill="none" stroke="#2e8b57" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-green)"/>
+<path d="M810,850 V650" fill="none" stroke="#2e8b57" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-green)"/>
+<path d="M1210,850 V800" fill="none" stroke="#2e8b57" stroke-width="2.4" stroke-dasharray="8 6" marker-end="url(#m-green)"/>
+<rect x="1480" y="110" width="290" height="850" rx="12" fill="#fff" stroke="#ccc" stroke-width="1.5"/>
+<circle cx="1510" cy="140" r="15" fill="#2e8b57"/>
+<text x="1510" y="146" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">1</text>
+<text x="1536" y="147" font-size="17" font-weight="700" fill="#2e8b57" text-anchor="start">User > Open WebUI</text>
+<text x="1536" y="174" font-size="15" font-weight="400" fill="#444" text-anchor="start">The user opens the web UI</text>
+<text x="1536" y="195" font-size="15" font-weight="400" fill="#444" text-anchor="start">through HTTPS (Traefik)</text>
+<text x="1536" y="216" font-size="15" font-weight="400" fill="#444" text-anchor="start">or an SSH tunnel.</text>
+<circle cx="1510" cy="280" r="15" fill="#2f66d0"/>
+<text x="1510" y="286" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">2</text>
+<text x="1536" y="287" font-size="17" font-weight="700" fill="#2f66d0" text-anchor="start">Open WebUI > vLLM</text>
+<text x="1536" y="314" font-size="15" font-weight="400" fill="#444" text-anchor="start">Chat requests use the</text>
+<text x="1536" y="335" font-size="15" font-weight="400" fill="#444" text-anchor="start">OpenAI API. vLLM runs</text>
+<text x="1536" y="356" font-size="15" font-weight="400" fill="#444" text-anchor="start">Qwen3.5-4B on the GPU.</text>
+<circle cx="1510" cy="420" r="15" fill="#d6456b"/>
+<text x="1510" y="426" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">3</text>
+<text x="1536" y="427" font-size="17" font-weight="700" fill="#d6456b" text-anchor="start">Voice Flow (Optional)</text>
+<text x="1536" y="454" font-size="15" font-weight="400" fill="#444" text-anchor="start">Speech > STT > text.</text>
+<text x="1536" y="475" font-size="15" font-weight="400" fill="#444" text-anchor="start">Answer text > TTS > sound,</text>
+<text x="1536" y="496" font-size="15" font-weight="400" fill="#444" text-anchor="start">one sentence at a time.</text>
+<circle cx="1510" cy="560" r="15" fill="#7a4fd1"/>
+<text x="1510" y="566" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">4</text>
+<text x="1536" y="567" font-size="17" font-weight="700" fill="#7a4fd1" text-anchor="start">Internal Networking</text>
+<text x="1536" y="594" font-size="15" font-weight="400" fill="#444" text-anchor="start">Pods talk through ClusterIP</text>
+<text x="1536" y="615" font-size="15" font-weight="400" fill="#444" text-anchor="start">Services: webui, vllm,</text>
+<text x="1536" y="636" font-size="15" font-weight="400" fill="#444" text-anchor="start">stt, tts.</text>
+<circle cx="1510" cy="700" r="15" fill="#2e8b57"/>
+<text x="1510" y="706" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">5</text>
+<text x="1536" y="707" font-size="17" font-weight="700" fill="#2e8b57" text-anchor="start">External Services</text>
+<text x="1536" y="734" font-size="15" font-weight="400" fill="#444" text-anchor="start">Model from Hugging Face,</text>
+<text x="1536" y="755" font-size="15" font-weight="400" fill="#444" text-anchor="start">images from registries,</text>
+<text x="1536" y="776" font-size="15" font-weight="400" fill="#444" text-anchor="start">data on PVC.</text>
+<circle cx="1510" cy="840" r="15" fill="#f08a1c"/>
+<text x="1510" y="846" font-size="17" font-weight="700" fill="#fff" text-anchor="middle">6</text>
+<text x="1536" y="847" font-size="17" font-weight="700" fill="#f08a1c" text-anchor="start">Monitoring &amp; Observability</text>
+<text x="1536" y="874" font-size="15" font-weight="400" fill="#444" text-anchor="start">Metrics in Prometheus,</text>
+<text x="1536" y="895" font-size="15" font-weight="400" fill="#444" text-anchor="start">dashboards in Grafana,</text>
+<text x="1536" y="916" font-size="15" font-weight="400" fill="#444" text-anchor="start">logs in Loki, alerts in</text>
+<text x="1536" y="937" font-size="15" font-weight="400" fill="#444" text-anchor="start">Alertmanager.</text>
+<rect x="30" y="990" width="1740" height="50" rx="12" fill="#fff" stroke="#ccc" stroke-width="1.5"/>
+<path d="M60,1015 H120" stroke="#222" stroke-width="2.6" marker-end="url(#m-black)"/>
+<text x="136" y="1021" font-size="16" font-weight="400" fill="#333" text-anchor="start">User Request / Response</text>
+<path d="M345,1015 H405" stroke="#2f66d0" stroke-width="2.6" marker-end="url(#m-blue)"/>
+<text x="421" y="1021" font-size="16" font-weight="400" fill="#333" text-anchor="start">LLM Inference Path</text>
+<path d="M630,1015 H690" stroke="#d6456b" stroke-width="2.6" stroke-dasharray="8 6" marker-end="url(#m-pink)"/>
+<text x="706" y="1021" font-size="16" font-weight="400" fill="#333" text-anchor="start">Audio Path (Optional)</text>
+<path d="M915,1015 H975" stroke="#7a4fd1" stroke-width="2.6" stroke-dasharray="8 6" marker-end="url(#m-purple)"/>
+<text x="991" y="1021" font-size="16" font-weight="400" fill="#333" text-anchor="start">Internal Communication</text>
+<path d="M1200,1015 H1260" stroke="#2e8b57" stroke-width="2.6" stroke-dasharray="8 6" marker-end="url(#m-green)"/>
+<text x="1276" y="1021" font-size="16" font-weight="400" fill="#333" text-anchor="start">External Integration</text>
+<path d="M1485,1015 H1545" stroke="#f08a1c" stroke-width="2.6" stroke-dasharray="8 6" marker-end="url(#m-orange)"/>
+<text x="1561" y="1021" font-size="16" font-weight="400" fill="#333" text-anchor="start">Metrics / Logs</text>
+</svg>

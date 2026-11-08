@@ -8,8 +8,9 @@ Everything runs on one machine with one GPU: a local PC with an **NVIDIA RTX 407
 The same stack can run on a rented GPU machine (see [`docs/setup.md`](docs/setup.md), section "If
 you run on EC2").
 
-> **Status:** the code and the manifests are written. They are **not tested on a machine yet**.
-> The first full test on the local PC is the next step. See "Status" at the end.
+> **Status:** the code and the manifests are written. Part of the stack ran on the local PC, in WSL2
+> (not yet on bare-metal Ubuntu or EC2). The rest is not tested yet. See "Status" at the end for
+> what ran and what did not.
 
 **Credit.** This project is inspired by
 [PoonpipatChangkwain/vLLM-chatBOT](https://github.com/PoonpipatChangkwain/vLLM-chatBOT). The author
@@ -138,7 +139,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | `speech/stt/`, `speech/tts/` | The faster-whisper (STT) and Piper (TTS) servers |
 | `vllm/` | Dockerfile of the vLLM image (it mounts the adapter folder) |
 | `bench/` | Benchmark harness, lever script, quality check, dashboard generator, smoke test |
-| `docs/` | `GUIDE.md`, `setup.md`, `benchmarks.md`, `diagram-prompt.md`, `workflow.png` |
+| `docs/` | `GUIDE.md`, `setup.md`, `benchmarks.md`, `workflow.png` (source: `workflow.svg`), `diagram-prompt.md` |
 | `.scratch/` | The spec and the tickets of this project |
 
 ---
@@ -156,14 +157,19 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 
 | Part | Status |
 |---|---|
-| STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac (not on the PC) |
-| GPU node, vLLM on k3s, Open WebUI, voice mode | Written, not tested |
-| Monitoring, logs, alerts, HTTPS | Written, config checks only (`kubeconform`, `promtool`, `amtool`, `loki -verify-config`) |
-| Benchmark harness, lever script, smoke test | Written, logic tested with fake data |
-| Benchmark numbers, measured VRAM | Not measured yet |
-| Thai TTS voice | Planned (bonus) |
+| GPU node: NVIDIA Container Toolkit, Docker, k3s, device plugin, GPU test pod | Ran on WSL2: the node reports `nvidia.com/gpu: 1` and a pod runs `nvidia-smi` |
+| vLLM with Qwen3.5-4B (standalone, in Docker) | Ran on WSL2: chat, stream, tool calls, and thinking off work. VRAM measured (`docs/benchmarks.md`) |
+| STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac. Ran on k3s in WSL2: the round trip returned "Hello World!" |
+| Open WebUI | Pod ready on k3s in WSL2, `/health` answers. Chat in the browser is not tested |
+| vLLM on k3s, monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Applied on k3s in WSL2. The result was not checked. Config checks passed (`kubeconform`, `promtool`, `amtool`, `loki -verify-config`) |
+| Voice mode in the browser, HTTPS Ingress | Written, not tested |
+| Benchmark harness, lever script, smoke test | Written, logic tested with fake data. Not run on the cluster |
+| Benchmark numbers (latency, throughput, levers) | Not measured yet |
+| Thai TTS voice | Planned (bonus). Comparison scripts are written and not run |
 | LLM-D router, scale-to-zero | Planned, not built |
 | Feedback pipeline (Redis Streams) | Planned, not built |
 | Weekly retraining (LoRA and DPO) | Planned, not built |
+
+Next: finish the checks on the PC, then repeat them on bare-metal Ubuntu or EC2.
 
 > This project is for practice of infra and scheduling. It is not a production system.
