@@ -1,4 +1,4 @@
-# vLLM chat pod. Flags are provisional until ticket 02 measures them on the PC.
+# vLLM chat pod. The memory flags come from the standalone run on WSL2 (docs/benchmarks.md, section VRAM).
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -46,7 +46,7 @@ spec:
             - --served-model-name=Qwen/Qwen3.5-4B
             - --dtype=bfloat16
             - --language-model-only   # skip the vision encoder to save VRAM
-            - --gpu-memory-utilization=0.80   # the desktop display also uses this GPU
+            - --gpu-memory-utilization=0.89   # measured: 0.80 leaves no KV cache. The max is set by the free VRAM at start.
             - --max-model-len=4096
             - --max-num-seqs=4
             - --enable-prefix-caching

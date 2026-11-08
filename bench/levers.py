@@ -28,7 +28,7 @@ BASELINE = [
     "--served-model-name=Qwen/Qwen3.5-4B",
     "--dtype=bfloat16",
     "--language-model-only",
-    "--gpu-memory-utilization=0.80",
+    "--gpu-memory-utilization=0.89",
     "--max-model-len=4096",
     "--max-num-seqs=4",
     "--no-enable-prefix-caching",
