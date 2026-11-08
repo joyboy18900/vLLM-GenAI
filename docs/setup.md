@@ -157,6 +157,12 @@ Copy these numbers into `docs/benchmarks.md` (section "VRAM") and into the table
 | Total VRAM in use | `nvidia-smi` while vLLM is idle |
 | Desktop display | the number you wrote down before the start |
 
+### Measure with and without `--language-model-only`
+
+The flag skips the vision encoder. It is on by default because VRAM is tight, but nobody
+measured it yet. Start vLLM twice, once with the flag and once without it. Write the VRAM numbers
+of both runs in `docs/benchmarks.md`. Keep the flag only if the difference is needed.
+
 ### If something does not fit
 
 1. If the KV cache is too small, test fp8 weights (`--quantization fp8`) and fp8 KV cache
@@ -504,6 +510,10 @@ bench/run.sh baseline && python3 bench/quality_check.py --label baseline
 python3 bench/levers.py apply prefix-caching
 bench/run.sh prefix-caching && python3 bench/quality_check.py --label prefix-caching
 ```
+
+If the lever `spec-mtp` does not start, change the `method` value in `bench/levers.py`. The value
+`qwen3_next_mtp` comes from the Qwen3.5-4B model card. vLLM v0.28.0 also accepts `qwen3_5_mtp` and
+`mtp`. Try them one at a time and write the working name in `docs/benchmarks.md`.
 
 Levers: `prefix-caching`, `chunked-prefill`, `spec-ngram`, `spec-mtp`, `awq`
 (`--model <AWQ checkpoint>`), `fp8-weights`, `fp8-kv-cache`, `thinking-on`.

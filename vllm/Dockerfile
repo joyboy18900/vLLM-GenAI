@@ -6,7 +6,8 @@
 #   docker pull vllm/vllm-openai:v0.28.0
 #   docker save vllm/vllm-openai:v0.28.0 | sudo k3s ctr images import -
 #
-# The LoRA adapter folder is mounted at runtime (see k8s/vllm-deployment.yaml).
+# The folder /adapters is for the weekly LoRA adapters. LoRA serving is planned and not built,
+# so k8s/vllm-deployment.yaml does not mount this folder yet.
 
 FROM vllm/vllm-openai:v0.28.0
 
