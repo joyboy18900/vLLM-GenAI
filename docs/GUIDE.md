@@ -5,9 +5,9 @@ answer. It also explains what k3s does at each step and how to read the dashboar
 
 Read it once from the top. Then use it as a map when something does not work.
 
-**Status of this guide:** it describes the design of the system. The system was written but not
-tested on a machine yet (see `docs/setup.md`). Where a number depends on a measurement, the guide
-says so and does not give a number.
+**Status of this guide:** it describes the design of the system. Part of the system ran on the
+local PC in WSL2 and the rest is not tested yet (see `docs/setup.md` and the README). Where a number
+depends on a measurement, the guide says so and does not give a number.
 
 ## Part 0: the parts of the system
 

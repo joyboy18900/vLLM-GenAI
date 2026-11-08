@@ -3,10 +3,12 @@
 This runbook sets up the whole system on one machine, in order. Each section has the steps and
 a check command with the expected result.
 
-**Test status:** written, not tested on a machine yet. Parts that ran on a Mac are named in
-their section (the STT and TTS servers, the metrics routes, the certificate commands, and the
-scripts that run on the Mac). After the first full run on the local PC, replace this paragraph
-with "Tested on the local PC" and fill the PC spec table in the first section.
+**Test status:** partly tested. Each section starts with its own status. The GPU node, vLLM
+standalone, the speech pods, and the Open WebUI pod ran on the local PC in WSL2 (not on bare-metal
+Ubuntu or EC2). Parts that ran on a Mac are named in their section (the STT and TTS servers, the
+metrics routes, the certificate commands, and the scripts that run on the Mac). Everything else is
+written and not tested. After the full run on Ubuntu or EC2, replace this paragraph with the
+result and fill the PC spec table in the first section.
 
 Order: PC as a GPU node, vLLM standalone, speech servers, vLLM on k3s, Open WebUI, voice mode,
 monitoring, logs, alerts, HTTPS, benchmarks, levers, smoke test. Then "If you run on EC2".
