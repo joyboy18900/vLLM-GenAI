@@ -599,9 +599,10 @@ Open WebUI. Do that only after the choice.
 
 ## Rehearsal on WSL2 (before the real test)
 
-Status: written, untested. A first run in WSL2 on the PC finds most mistakes early. WSL2 is not
-bare-metal Linux, so write every result of this run as "tested on WSL2". It does not replace the
-test on Ubuntu or on EC2. The test on Ubuntu or EC2 stays required for the parts that differ.
+Status: partly tested on WSL2 (2026-11-08). The section "PC as a GPU node" ran on WSL2 and passed
+(see "Observed on WSL2" below). The other sections are not run yet. WSL2 is not bare-metal Linux,
+so write every result of this run as "tested on WSL2". It does not replace the test on Ubuntu or
+on EC2. The test on Ubuntu or EC2 stays required for the parts that differ.
 
 ### What is different in WSL2
 
@@ -611,9 +612,11 @@ test on Ubuntu or on EC2. The test on Ubuntu or EC2 stays required for the parts
 | Memory | WSL2 uses half of the RAM by default. | Set the limit in `.wslconfig` (below). |
 | Services | k3s needs systemd. | Turn on systemd (below). |
 | Docker | Docker Desktop with its own Kubernetes breaks the GPU in the cluster. | Install `docker.io` inside WSL2 (step 3 of "PC as a GPU node"). Do not use Docker Desktop. |
-| Device plugin | WSL support was added to the plugin in 2026 (pull request 1671). It was not confirmed for v0.20.1. | If the node shows no `nvidia.com/gpu`, see the failure list below. |
+| Device plugin | v0.20.1 detects the platform `wsl` and registers the GPU (observed). | If the node shows no `nvidia.com/gpu`, see the failure list below. |
 | DCGM exporter | Not confirmed on WSL2. | If the pod fails or shows no GPU data, mark the GPU row of the dashboard and the `dcgm` target as "not testable on WSL2". |
+| `kubectl` | The `kubectl` that k3s installs reads the file of root by default. | Copy the file to `~/.kube/config` and set `export KUBECONFIG=$HOME/.kube/config` (put it in `~/.bashrc`). |
 | Network | NAT. A NodePort can be unreachable from Windows. | Use `kubectl port-forward` (below). Do not test the HTTPS Ingress here. |
+| Disk | The distribution disk is on `C:` by default. | Move it with `wsl --manage Ubuntu-24.04 --move D:\vLLM\wsl\Ubuntu-24.04` (below). |
 | Numbers | Windows can still use the GPU. | VRAM and benchmark numbers are not final. |
 
 ### Prepare Windows and WSL2
@@ -637,25 +640,69 @@ test on Ubuntu or on EC2. The test on Ubuntu or EC2 stays required for the parts
    wsl --shutdown
    ```
 5. Check the GPU inside WSL2: `nvidia-smi` must show the RTX 4070 SUPER.
+6. (Optional) Move the distribution disk to another drive. Close every WSL2 window, then:
+   ```powershell
+   wsl --shutdown
+   wsl --manage Ubuntu-24.04 --move D:\vLLM\wsl\Ubuntu-24.04
+   ```
+   If the move says `ERROR_SHARING_VIOLATION`, WSL2 is still running. Run `wsl --shutdown` and
+   move again at once, without another `wsl` command in between.
 
 ### Get the code into WSL2 without a push
 
-Nothing goes to GitHub. On the Mac:
+Nothing goes to GitHub. With SSH access (next section), send the project from the Mac. The project
+folder in this run is `D:\vLLM\vLLM-GenAI` (`/mnt/d/vLLM/vLLM-GenAI` in WSL2):
 
 ```bash
 cd ~/Workspaces/Code/vLLM/vLLM-GenAI
-git bundle create /tmp/vllm-genai.bundle --all
+COPYFILE_DISABLE=1 tar czf - . | ssh -i ~/.ssh/<key> <windows-user>@<pc-ip> \
+  'wsl -d Ubuntu-24.04 -- bash -lc "mkdir -p /mnt/d/vLLM/vLLM-GenAI && tar xzf - -C /mnt/d/vLLM/vLLM-GenAI"'
 ```
 
-Move the file to the PC (USB, a shared folder, or any file copy). In WSL2:
+Then check that `git rev-parse HEAD` in the copy equals the one on the Mac. Run
+`git config core.fileMode false` in the copy, because the Windows disk does not keep Unix modes.
+The warnings `Ignoring unknown extended header keyword` come from macOS and are harmless.
 
-```bash
-git clone /path/to/vllm-genai.bundle vLLM-GenAI
-```
+Without SSH, make a bundle on the Mac (`git bundle create /tmp/vllm-genai.bundle --all`), move the
+file to the PC, and run `git clone <bundle> vLLM-GenAI` in WSL2.
+
+### Remote access from the Mac (optional)
+
+This lets the agent or you run the steps from the Mac. It uses the OpenSSH Server of Windows.
+
+1. PowerShell as Administrator on the PC:
+   ```powershell
+   Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+   Set-Service -Name sshd -StartupType Automatic
+   Start-Service sshd
+   ```
+2. On the Mac, make a key and put the public key (one line) in
+   `C:\ProgramData\ssh\administrators_authorized_keys` on the PC (the account is an
+   administrator). Then run `icacls.exe C:\ProgramData\ssh\administrators_authorized_keys /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`.
+3. The firewall rule `OpenSSH-Server-In-TCP` applies only to the profile `Private`. If the network
+   is `Public`, the Mac cannot connect (the symptom is a timeout). Fix it for the home network only:
+   ```powershell
+   Set-NetFirewallRule -Name OpenSSH-Server-In-TCP -Profile Private,Public -RemoteAddress 192.168.1.0/24
+   ```
+4. Do not set `DefaultShell` to `bash.exe`. That file does not exist on current WSL. sshd then
+   refuses the user ("shell ... does not exist"). Keep the default shell and call WSL in the command:
+   ```bash
+   ssh -i ~/.ssh/<key> <windows-user>@<pc-ip> 'wsl -d Ubuntu-24.04 -- bash -s' <<'EOF'
+   echo "this script runs in WSL2"
+   EOF
+   ```
+   Send scripts through stdin. A command in quotes is expanded by a shell on the way, and the
+   result is wrong. To run a command as root without a password, use `wsl -d Ubuntu-24.04 -u root -- ...`.
+5. When the run is over, take the access away (PowerShell as Administrator):
+   ```powershell
+   Set-NetFirewallRule -Name OpenSSH-Server-In-TCP -Profile Private -RemoteAddress Any
+   Stop-Service sshd; Set-Service sshd -StartupType Disabled
+   Remove-Item C:\ProgramData\ssh\administrators_authorized_keys
+   ```
 
 ### Run the steps
 
-Run every command in the WSL2 terminal, with `kubectl` inside WSL2. There is no `KUBECONFIG` step.
+Run the commands in WSL2 with `kubectl` inside WSL2 (with `KUBECONFIG` set, see the table).
 Follow the sections in this order, with the changes from the table above:
 
 1. "PC as a GPU node": skip step 1, do steps 2 to 6.
@@ -672,6 +719,17 @@ The address is `localhost`, so the microphone works:
 kubectl port-forward svc/webui 8080:8080       # http://localhost:8080
 kubectl -n monitoring port-forward svc/grafana 3000:3000   # http://localhost:3000
 ```
+
+### Observed on WSL2
+
+| Step | Result |
+|---|---|
+| `nvidia-smi` in WSL2 | RTX 4070 SUPER visible. About 1 GB of VRAM is used by the Windows desktop. |
+| NVIDIA Container Toolkit 1.20.1 | Installed. |
+| Docker 29.1.3 with `--gpus all` | A container sees the GPU. |
+| k3s v1.37.2+k3s1 | Node `Ready`. The NVIDIA runtime is in the containerd config. |
+| Device plugin v0.20.1 | Log says `Detected platform: wsl`. The node reports `nvidia.com/gpu: 1`. |
+| `k8s/gpu-test.yaml` | The pod ran `nvidia-smi` and ended with `Succeeded`. |
 
 ### If the node shows no GPU
 

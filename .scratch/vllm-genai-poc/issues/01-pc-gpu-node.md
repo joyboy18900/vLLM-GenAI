@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** written, untested. The manifests pass kubeconform and the image tags exist. The PC runs Windows now: install Ubuntu again first. No box is ticked.
+**Test status:** tested on WSL2 on 2026-11-08 (not on Ubuntu, so no box is ticked). On WSL2 the toolkit, Docker, k3s, the device plugin (`nvidia.com/gpu: 1`), and the GPU test pod all passed. The same steps are still to run on Ubuntu or EC2.
 
 Notes:
 - The agent works from the Mac. The user runs the commands that need `sudo` on the PC, or gives the agent SSH access first.
