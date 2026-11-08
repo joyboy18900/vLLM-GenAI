@@ -1,8 +1,8 @@
 # Prompt for the workflow diagram
 
-The file `docs/workflow.svg` is a diagram drawn as code, and `docs/workflow.png` is its image. It shows
-the same system. Use this prompt in an AI image tool only if you want a different look. Save the
-result as `docs/workflow.png`. Then check the image
+The file `docs/workflow.png` was made with ChatGPT from the diagram of the reference project. The file
+`docs/workflow.svg` shows the same system, drawn as code. Use this prompt in an AI image tool to make
+a new version. Save the result as `docs/workflow.png`. Then check the image
 against the list "Check the image" below. Fix the prompt and generate again if a check fails.
 
 The diagram shows only parts that exist in this repository. It must not show the LLM-D router,
