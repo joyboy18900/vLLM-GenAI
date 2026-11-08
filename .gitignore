@@ -27,3 +27,9 @@ bench/out/
 .idea/
 .vscode/
 *.swp
+
+# Secrets and keys
+.env
+*.pem
+*.key
+*.crt
