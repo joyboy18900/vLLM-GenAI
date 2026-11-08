@@ -69,6 +69,10 @@ spec:
               value: "false"   # one user, no login screen
             - name: ENABLE_OLLAMA_API
               value: "false"
+            # Open WebUI keeps settings in its database after the first start, and they win over
+            # env vars. Turn that off, so that this file stays the source of truth.
+            - name: ENABLE_PERSISTENT_CONFIG
+              value: "false"
             - name: OPENAI_API_BASE_URL
               value: http://vllm:8000/v1
             - name: OPENAI_API_KEY
