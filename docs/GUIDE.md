@@ -161,7 +161,7 @@ because their data volume can be used by one pod at a time.
 
 ### 3.5 Health checks
 
-Each pod has three checks on `/health` (or a similar route):
+The vLLM, STT, TTS, and Open WebUI pods have three checks on `/health`. Most monitoring pods have only the readiness and liveness checks:
 
 - **Startup.** It gives a slow start, such as a first model download, up to 15 minutes. The other
   checks wait until it passes.

@@ -12,7 +12,7 @@ is "WSL2". They do not replace the runs on Ubuntu or EC2.
 | GPU and driver version | RTX 4070 SUPER 12 GB. Windows driver 616.64, driver seen in WSL2 615.65.07, CUDA 13.4. |
 | vLLM version | v0.28.0 (`vllm/vllm-openai:v0.28.0`) |
 | Model and dtype | `Qwen/Qwen3.5-4B`, bfloat16, text-only (`--language-model-only`) |
-| Flags | `--gpu-memory-utilization 0.89 --max-model-len 4096 --max-num-seqs 4 --reasoning-parser qwen3 --default-chat-template-kwargs '{"enable_thinking": false}' --enable-auto-tool-choice --tool-call-parser qwen3_coder` |
+| Flags | `--gpu-memory-utilization 0.89 --max-model-len 4096 --max-num-seqs 4 --reasoning-parser qwen3 --default-chat-template-kwargs '{"enable_thinking": false}' --enable-auto-tool-choice --tool-call-parser qwen3_coder`. The flag for prefix caching was not set in this run (the engine default). |
 
 ## VRAM (ticket 02)
 

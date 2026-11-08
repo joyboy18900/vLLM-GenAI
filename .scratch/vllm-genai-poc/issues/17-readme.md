@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** drafted. Sections, credit, and the vLLM Bangkok sentence are in place. The criterion "every command was run on the PC" is open: the README says so in its status table. `docs/workflow.png` does not exist yet (ticket 16, the user makes it).
+**Test status:** drafted. Sections, credit, and the vLLM Bangkok sentence are in place. `docs/workflow.png` exists (made with ChatGPT, known issues in ticket 16). The criterion "every command was run on the PC" is open: the README says so in its status table.
 
 - [ ] Same sections as the reference README: overview with the diagram, machine requirements, setup steps, smoke test, repo layout, documents, status
 - [ ] Credit: inspired by the reference project, with a link, and 1-2 sentences that the project started after the vLLM Bangkok meetup

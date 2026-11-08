@@ -72,7 +72,7 @@ kubectl describe node | grep nvidia.com/gpu     # expected: nvidia.com/gpu: 1
 ```
 
 **2. Run vLLM alone first (optional but advised).** It measures the real VRAM use and checks that
-the model loads. See the section "vLLM standalone on the PC".
+the model loads. See the section "vLLM standalone on the PC" in `docs/setup.md`.
 
 **3. Build and import the speech images.**
 
@@ -101,7 +101,7 @@ kubectl apply -f k8s/monitoring/
 ```
 
 **6. (Optional) HTTPS.** Make a local certificate authority, trust it on your computer, and apply the
-Ingress. See the section "Ingress with HTTPS".
+Ingress. See the section "Ingress with HTTPS" in `docs/setup.md`.
 
 **7. Open the pages through an SSH tunnel.**
 
@@ -149,7 +149,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 - [`CLAUDE.md`](CLAUDE.md): the project overview and all design decisions.
 - [`docs/GUIDE.md`](docs/GUIDE.md): how a request moves through the system, and how to read the dashboard.
 - [`docs/setup.md`](docs/setup.md): the setup runbook, in order, with a check after each step.
-- [`docs/benchmarks.md`](docs/benchmarks.md): the benchmark results (empty until the first measurement).
+- [`docs/benchmarks.md`](docs/benchmarks.md): the benchmark results (the VRAM is measured on WSL2, the latency numbers wait for the benchmark run).
 
 ---
 

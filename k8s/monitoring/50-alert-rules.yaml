@@ -1,4 +1,4 @@
-# Alert rules as code. Prometheus loads them from /etc/prometheus/rules.
+# Alert rules as code. Prometheus loads them from /etc/prometheus-rules.
 ---
 apiVersion: v1
 kind: ConfigMap

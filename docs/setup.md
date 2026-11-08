@@ -15,8 +15,9 @@ monitoring, logs, alerts, HTTPS, benchmarks, levers, smoke test. Then "If you ru
 
 ## PC as a GPU node
 
-Status: written, untested. The PC runs Windows now. Install Ubuntu again before you start. You run
-the commands that need `sudo` on the PC yourself.
+Status: ran on WSL2 on 2026-11-08 (see "Observed on WSL2" in the WSL2 section). For the run on
+bare-metal Ubuntu, install Ubuntu on the PC first. The PC runs Windows now. The commands that need
+`sudo` run on the PC (on WSL2 they ran as root with `wsl -u root`).
 
 ### PC spec
 
@@ -24,12 +25,15 @@ Fill this table on the PC. Run the command in the second column.
 
 | Item | Command | Value |
 |---|---|---|
-| CPU | `lscpu \| grep "Model name"` | to fill |
-| RAM | `free -h` | to fill |
-| GPU and VRAM | `nvidia-smi --query-gpu=name,memory.total --format=csv` | to fill |
-| Disk | `lsblk -o NAME,SIZE,MOUNTPOINT` | to fill |
-| OS | `lsb_release -d` | to fill |
-| Driver version | `nvidia-smi --query-gpu=driver_version --format=csv,noheader` | to fill |
+| CPU | `lscpu \| grep "Model name"` | AMD Ryzen 7 8700F, 8 cores and 16 threads (from the owner, not read by the command) |
+| RAM | `free -h` | 32 GB (from the owner). WSL2 limit 24 GB (`free -h` shows 23 GiB). |
+| GPU and VRAM | `nvidia-smi --query-gpu=name,memory.total --format=csv` | NVIDIA GeForce RTX 4070 SUPER, 12,282 MiB |
+| Disk | `lsblk -o NAME,SIZE,MOUNTPOINT` | Windows drives: C: 465 GB (331 GB free), D: 466 GB (the WSL2 disk is here), E: 466 GB (178 GB free) |
+| OS | `lsb_release -d` | Windows (build 10.0.26300) with WSL2 Ubuntu 24.04.5 LTS, kernel 6.18.54.1-microsoft-standard-WSL2 |
+| Driver version | `nvidia-smi --query-gpu=driver_version --format=csv,noheader` | Windows driver 616.64. `nvidia-smi` in WSL2 shows 615.65.07 and CUDA 13.4. |
+
+These values come from the run on WSL2 (2026-11-08). Fill them again for the run on bare-metal
+Ubuntu and for EC2.
 
 ### 1. NVIDIA driver
 
@@ -193,8 +197,9 @@ does not start (KV cache memory is -0.18 GiB). The flag is needed on this 12 GB 
    `--default-chat-template-kwargs`.
 
 3. If vLLM stops at start with an error about prefix caching or chunked prefill, the cause can be
-   that Qwen3.5 is a hybrid model. Remove `--enable-prefix-caching` from `k8s/vllm-deployment.yaml`
-   and from the start command above. For the levers, skip the lever `chunked-prefill` or
+   that Qwen3.5 is a hybrid model. Remove `--enable-prefix-caching` from `k8s/vllm-deployment.yaml`.
+   Add `--no-enable-prefix-caching` to the start command above (the engine turns prefix caching on
+   by default for this model). For the levers, skip the lever `chunked-prefill` or
    `prefix-caching` that fails. Write the error and the choice in `docs/benchmarks.md`.
 
 ### Stop
