@@ -22,6 +22,7 @@ DEPLOYMENT = "deploy/vllm-qwen"
 
 # Baseline: bf16, no optional engine levers. Prefix caching and chunked prefill are
 # switched off on purpose, so their levers show a real difference.
+# Keep every other flag in step with k8s/vllm-deployment.yaml. Change both files together.
 BASELINE = [
     "Qwen/Qwen3.5-4B",
     "--served-model-name=Qwen/Qwen3.5-4B",
