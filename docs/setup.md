@@ -64,8 +64,11 @@ docker run --rm hello-world      # expected: "Hello from Docker!"
 
 Write the k3s version you install in this file.
 
+Add the address of the PC to the certificate (`--tls-san`). Without it, `kubectl` from the Mac can
+refuse the connection.
+
 ```bash
-curl -sfL https://get.k3s.io | sh -
+curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--tls-san <pc-address>" sh -
 sudo k3s kubectl get node        # expected: one node, Ready
 sudo grep -c nvidia /var/lib/rancher/k3s/agent/etc/containerd/config.toml   # expected: 1 or more
 ```
@@ -76,8 +79,12 @@ Use `kubectl` from the Mac. Copy the config and replace the address:
 # on the PC
 sudo cat /etc/rancher/k3s/k3s.yaml
 # on the Mac: save it as ~/.kube/genai.yaml and replace 127.0.0.1 with the PC address
-KUBECONFIG=~/.kube/genai.yaml kubectl get node     # expected: one node, Ready
+export KUBECONFIG=~/.kube/genai.yaml
+kubectl get node     # expected: one node, Ready
 ```
+
+Set `KUBECONFIG` in every new terminal. All later `kubectl` commands and the scripts in `bench/`
+use it.
 
 ### 5. RuntimeClass and device plugin
 
@@ -172,6 +179,11 @@ of both runs in `docs/benchmarks.md`. Keep the flag only if the difference is ne
    `k8s/vllm-deployment.yaml`, `bench/run.sh`, and `bench/quality_check.py`. For Qwen2.5 use
    `--tool-call-parser hermes` and remove `--reasoning-parser`, `--language-model-only`, and
    `--default-chat-template-kwargs`.
+
+3. If vLLM stops at start with an error about prefix caching or chunked prefill, the cause can be
+   that Qwen3.5 is a hybrid model. Remove `--enable-prefix-caching` from `k8s/vllm-deployment.yaml`
+   and from the start command above. For the levers, skip the lever `chunked-prefill` or
+   `prefix-caching` that fails. Write the error and the choice in `docs/benchmarks.md`.
 
 ### Stop
 
@@ -279,6 +291,10 @@ kubectl apply -f k8s/open-webui-deployment.yaml
 kubectl rollout status deploy/open-webui
 ```
 
+Open WebUI settings come from the environment variables in `k8s/open-webui-deployment.yaml`
+(`ENABLE_PERSISTENT_CONFIG` is `false`). A setting that you change in the web UI returns to the
+file value when the pod restarts. Change the file and apply it again to change a setting for good.
+
 ### Open it from the Mac
 
 The web UI listens on NodePort 30080 on the PC. Open an SSH tunnel. The browser then sees
@@ -350,7 +366,10 @@ kubectl apply -f k8s/monitoring/31-dashboard-serving.yaml -f k8s/monitoring/30-g
    in as `admin` with your password. There is no anonymous access.
 3. Open the dashboard "vLLM Serving - SLO, KV cache, GPU". Send a few chat requests. The
    panels for throughput, TTFT, and running requests must move.
-4. If a vLLM panel stays empty, open `http://<vllm pod>:8000/metrics` and compare the metric
+4. If the target `dcgm` is down or shows no GPU, the pod may not see the GPU without a GPU request.
+   Add `privileged: true` under `securityContext` of the container in
+   `k8s/monitoring/20-dcgm-exporter.yaml`, apply the file, and write the change here.
+5. If a vLLM panel stays empty, open `http://<vllm pod>:8000/metrics` and compare the metric
    names with `bench/gen_dash.py`. The names come from the vLLM v0.28.0 source.
 
 ## Logs with Loki
