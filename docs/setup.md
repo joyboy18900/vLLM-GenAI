@@ -543,6 +543,41 @@ It takes about one minute and prints `PASS` or `FAIL` for each check:
 The first four groups run in a temporary pod (`curlimages/curl`), because the Services are
 ClusterIP only. The HTTPS checks run on the Mac. The exit code is 1 if any check fails.
 
+## Thai TTS (bonus)
+
+Status: the comparison scripts are written and were never run. You run them yourself, because
+the image installs code from GitHub. Do this after voice mode works in English.
+
+Two candidates make speech for the same 8 Thai sentences (tones, numbers, mixed English words).
+The facts of the candidates are in `docs/benchmarks.md`, section "Thai TTS".
+
+```bash
+cd bench/thai_tts
+docker build -t genai-thai-tts:dev .
+mkdir -p ../results/thai-tts "$HOME/.cache/genai-thai-voices"
+
+# Candidate 1: Piper voice th_TH-tsync2-medium (63 MB)
+docker run --rm --entrypoint python -v "$HOME/.cache/genai-thai-voices:/voices" genai-thai-tts:dev \
+  -m piper.download_voices th_TH-tsync2-medium --download-dir /voices
+docker run --rm -v "$HOME/.cache/genai-thai-voices:/voices" -v "$PWD/../results/thai-tts:/out" \
+  genai-thai-tts:dev piper-th
+
+# Candidate 2: FastThaiG2P with the Thai Kokoro model (about 326 MB, downloads on the first run)
+docker run --rm -v genai-thai-cache:/root/.cache -v "$PWD/../results/thai-tts:/out" \
+  genai-thai-tts:dev fastthaig2p
+```
+
+Each command prints a Markdown table (time to first audio and RTF for each sentence). The WAV
+files are in `bench/results/thai-tts/`. Git ignores that folder. Listen to all sentences of both
+candidates, then choose one. Paste the tables in `docs/benchmarks.md`.
+
+The timings from a Mac or another machine are only good to compare the two candidates with each
+other. Run the same commands on the target machine for the final numbers.
+
+After you choose a voice, the work is: let `speech/tts/server.py` pick the voice file from the
+`voice` field of the request, add the voice to the voices folder, and set `AUDIO_TTS_VOICE` in
+Open WebUI. Do that only after the choice.
+
 ## If you run on EC2
 
 The local PC is the main machine. You can run the same stack on a rented GPU machine. The steps

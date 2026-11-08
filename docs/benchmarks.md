@@ -42,3 +42,23 @@ Final choice: not made yet. Write the chosen flags and the reasons here.
 ## Voice (ticket 06)
 
 Not measured yet. The time from the end of speech to the first audio.
+
+## Thai TTS (ticket 18, bonus)
+
+Candidates. The facts come from the model cards and the project pages. Time and quality are not
+measured yet (see `docs/setup.md`, section "Thai TTS").
+
+| Item | Piper `th_TH-tsync2-medium` | FastThaiG2P (Thai Kokoro-82M, ONNX) |
+|---|---|---|
+| Runs on | CPU | CPU |
+| Size | 63 MB | about 326 MB |
+| Sample rate | 22.05 kHz | not checked |
+| License of the code | MIT (Piper) | Apache-2.0 |
+| License of the voice data or weights | CC BY-NC-SA 3.0, non-commercial (from the model card of the voice) | not stated in the release notes or the README |
+| Needs | Piper 1.8 or newer (we use 1.8.0) | a new server in this repository |
+| Time to first audio | not measured yet | not measured yet |
+| RTF | not measured yet | not measured yet (the authors state about 0.2 on the CPU) |
+| Listening result | not heard yet | not heard yet |
+
+Chosen voice: not chosen yet.
+
