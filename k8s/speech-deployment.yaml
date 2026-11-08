@@ -73,17 +73,17 @@ spec:
           env:
             - name: HF_HOME
               value: /models/hf-cache
-            - name: WHISPER_MODEL
+            - name: STT_MODEL
               value: small.en
-            - name: WHISPER_DEVICE
+            - name: STT_DEVICE
               value: cpu
-            - name: WHISPER_COMPUTE_TYPE
+            - name: STT_COMPUTE_TYPE
               value: int8
-            - name: WHISPER_BEAM_SIZE
+            - name: STT_BEAM_SIZE
               value: "1"
-            - name: WHISPER_LANGUAGE
+            - name: STT_LANGUAGE
               value: en
-            - name: WHISPER_CONDITION_ON_PREV
+            - name: STT_CARRY_CONTEXT
               value: "0"
             - name: OMP_NUM_THREADS
               value: "4"
@@ -138,11 +138,11 @@ spec:
             - name: http
               containerPort: 8000
           env:
-            - name: PIPER_VOICE_PATH
+            - name: TTS_VOICE_FILE
               value: /voices/en_US-lessac-medium.onnx
-            - name: PIPER_SENTENCE_SILENCE
+            - name: TTS_SENTENCE_SILENCE
               value: "0.0"
-            - name: PIPER_MAX_CONCURRENCY
+            - name: TTS_MAX_PARALLEL
               value: "1"
           resources:
             requests: { cpu: "250m", memory: 512Mi }

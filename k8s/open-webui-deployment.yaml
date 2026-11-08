@@ -95,7 +95,7 @@ spec:
               value: en_US-lessac-medium
             # Sentence streaming: in call mode Open WebUI cuts the reply at
             # punctuation and sends one TTS request per sentence while the model
-            # still writes. This needs PIPER_SENTENCE_SILENCE=0 and one Piper
+            # still writes. This needs TTS_SENTENCE_SILENCE=0 and one Piper
             # process at a time on the tts server. If sentences overlap or
             # stutter, change this value to "paragraphs" and record it in docs/setup.md.
             - name: AUDIO_TTS_SPLIT_ON

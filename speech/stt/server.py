@@ -1,7 +1,10 @@
-"""STT server - OpenAI-compatible /v1/audio/transcriptions backed by faster-whisper.
+"""Speech to text service.
 
-Runs on CPU only (compute_type int8), so the GPU stays free for vLLM. Model
-weights download on first use into HF_HOME, which is a mounted volume.
+It offers the OpenAI transcription route on top of faster-whisper. It runs on the CPU
+(int8), so all GPU memory stays with vLLM. The model weights download on first use
+into HF_HOME, which is a mounted volume.
+
+All settings come from STT_* environment variables.
 """
 import os
 import tempfile
@@ -12,23 +15,21 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from faster_whisper import WhisperModel
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
-MODEL_SIZE = os.getenv("WHISPER_MODEL", "small.en")
-DEVICE = os.getenv("WHISPER_DEVICE", "cpu")
-COMPUTE_TYPE = os.getenv("WHISPER_COMPUTE_TYPE", "int8")
-CPU_THREADS = int(os.getenv("WHISPER_CPU_THREADS", "0"))  # 0 = let ctranslate2 decide
+MODEL = os.getenv("STT_MODEL", "small.en")
+DEVICE = os.getenv("STT_DEVICE", "cpu")
+COMPUTE_TYPE = os.getenv("STT_COMPUTE_TYPE", "int8")
+CPU_THREADS = int(os.getenv("STT_CPU_THREADS", "0"))  # 0: the library chooses
 
-# Greedy decoding (beam 1) is much faster on CPU and costs little accuracy on
-# short single-speaker utterances.
-BEAM_SIZE = int(os.getenv("WHISPER_BEAM_SIZE", "1"))
-# The voice stack is English first. A fixed language skips the detection pass.
-# An empty value keeps auto-detect. A per-request `language` field overrides it.
-DEFAULT_LANGUAGE = os.getenv("WHISPER_LANGUAGE", "en") or None
-# Voice utterances are independent. Do not carry decoder state between them.
-CONDITION_ON_PREV = os.getenv("WHISPER_CONDITION_ON_PREV", "0") == "1"
+# Greedy decoding (beam 1) is much faster on the CPU. It costs little accuracy on
+# short utterances from one speaker.
+BEAM_SIZE = int(os.getenv("STT_BEAM_SIZE", "1"))
+# Voice mode is English first. A fixed language skips the language detection step.
+# An empty value turns detection on. A `language` form field overrides this value.
+LANGUAGE = os.getenv("STT_LANGUAGE", "en") or None
+# Each utterance is separate. Set to 1 only to carry the decoder state to the next one.
+CARRY_CONTEXT = os.getenv("STT_CARRY_CONTEXT", "0") == "1"
 
-whisper = WhisperModel(
-    MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE, cpu_threads=CPU_THREADS
-)
+model = WhisperModel(MODEL, device=DEVICE, compute_type=COMPUTE_TYPE, cpu_threads=CPU_THREADS)
 
 REQUESTS = Counter("stt_requests_total", "Transcription requests", ["status"])
 LATENCY = Histogram(
@@ -36,14 +37,14 @@ LATENCY = Histogram(
     buckets=(0.1, 0.25, 0.5, 1, 2, 4, 8, 16, 32),
 )
 
-app = FastAPI(title="stt-faster-whisper")
+app = FastAPI(title="stt")
 
 
 @app.middleware("http")
 async def measure(request: Request, call_next):
     if request.url.path != "/v1/audio/transcriptions":
         return await call_next(request)
-    start = time.perf_counter()
+    started = time.perf_counter()
     status = "500"
     try:
         response = await call_next(request)
@@ -51,7 +52,7 @@ async def measure(request: Request, call_next):
         return response
     finally:
         REQUESTS.labels(status).inc()
-        LATENCY.observe(time.perf_counter() - start)
+        LATENCY.observe(time.perf_counter() - started)
 
 
 @app.get("/metrics")
@@ -62,38 +63,36 @@ def metrics():
 @app.get("/health")
 def health():
     return {
-        "status": "ok", "model": MODEL_SIZE, "device": DEVICE,
-        "compute_type": COMPUTE_TYPE, "beam_size": BEAM_SIZE,
-        "language": DEFAULT_LANGUAGE or "auto",
+        "status": "ok", "model": MODEL, "device": DEVICE, "compute_type": COMPUTE_TYPE,
+        "beam_size": BEAM_SIZE, "language": LANGUAGE or "auto",
     }
 
 
+# A plain `def` route runs in a worker thread. A long transcription then does not block
+# /health, so the liveness probe keeps working.
 @app.post("/v1/audio/transcriptions")
-async def transcriptions(
+def transcribe(
     file: UploadFile = File(...),
-    model: str = Form(default=None),  # accepted and ignored (one model is loaded)
+    model_name: str = Form(default=None, alias="model"),  # accepted and ignored: one model is loaded
     language: str = Form(default=None),
     prompt: str = Form(default=None),
     response_format: str = Form(default="json"),
     temperature: float = Form(default=0.0),
 ):
-    suffix = os.path.splitext(file.filename or "audio.wav")[1] or ".wav"
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(await file.read())
-        path = tmp.name
-    try:
-        segments, info = whisper.transcribe(
-            path,
-            language=language or DEFAULT_LANGUAGE,
+    suffix = os.path.splitext(file.filename or "")[1] or ".wav"
+    with tempfile.NamedTemporaryFile(suffix=suffix) as upload:
+        upload.write(file.file.read())
+        upload.flush()
+        segments, info = model.transcribe(
+            upload.name,
+            language=language or LANGUAGE,
             initial_prompt=prompt,
             temperature=temperature,
             beam_size=BEAM_SIZE,
-            condition_on_previous_text=CONDITION_ON_PREV,
+            condition_on_previous_text=CARRY_CONTEXT,
             vad_filter=True,
         )
-        text = "".join(seg.text for seg in segments).strip()
-    finally:
-        os.unlink(path)
+        text = "".join(segment.text for segment in segments).strip()
 
     if response_format in ("text", "srt", "vtt"):
         return PlainTextResponse(text)

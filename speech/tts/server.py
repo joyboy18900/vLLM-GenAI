@@ -1,7 +1,10 @@
-"""TTS server - OpenAI-compatible /v1/audio/speech backed by Piper.
+"""Text to speech service.
 
-Piper runs on CPU only, so it takes no VRAM from vLLM. Each request runs the
-Piper CLI, which writes a WAV file to stdout.
+It offers the OpenAI speech route on top of Piper. Piper runs on the CPU, so it takes
+no VRAM from vLLM. Each request runs the Piper command line tool, which writes a WAV
+file to its standard output.
+
+All settings come from TTS_* environment variables.
 """
 import os
 import subprocess
@@ -14,14 +17,16 @@ from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 from pydantic import BaseModel
 
-VOICE_PATH = os.getenv("PIPER_VOICE_PATH", "/voices/en_US-lessac-medium.onnx")
-# Open WebUI splits a long reply into many sentence requests. Piper adds its own
-# trailing silence to each one. Set it to 0 to avoid audible gaps.
-SENTENCE_SILENCE = os.getenv("PIPER_SENTENCE_SILENCE", "0.0")
-# Open WebUI sends many requests in parallel. Each one starts a Piper process
-# that uses a lot of memory, so run them one at a time by default.
-MAX_CONCURRENCY = int(os.getenv("PIPER_MAX_CONCURRENCY", "1"))
-_slot = threading.Semaphore(MAX_CONCURRENCY)
+VOICE_FILE = os.getenv("TTS_VOICE_FILE", "/voices/en_US-lessac-medium.onnx")
+# Open WebUI sends one request for each sentence. Piper adds silence after a sentence
+# by default. Zero gives gapless speech.
+SENTENCE_SILENCE = os.getenv("TTS_SENTENCE_SILENCE", "0.0")
+# Open WebUI sends its sentence requests at the same time. Each one starts a Piper
+# process that needs a lot of memory. Run only this many at once.
+MAX_PARALLEL = int(os.getenv("TTS_MAX_PARALLEL", "1"))
+CPU_THREADS = os.getenv("TTS_CPU_THREADS", "2")
+
+_slots = threading.BoundedSemaphore(MAX_PARALLEL)
 
 REQUESTS = Counter("tts_requests_total", "Speech requests", ["status"])
 LATENCY = Histogram(
@@ -29,14 +34,22 @@ LATENCY = Histogram(
     buckets=(0.1, 0.25, 0.5, 1, 2, 4, 8, 16),
 )
 
-app = FastAPI(title="tts-piper")
+app = FastAPI(title="tts")
+
+
+class SpeechRequest(BaseModel):
+    input: str
+    model: str | None = None  # accepted and ignored
+    voice: str | None = None  # accepted and ignored: one voice is loaded
+    response_format: str | None = "wav"  # Piper makes WAV only
+    speed: float | None = None
 
 
 @app.middleware("http")
 async def measure(request: Request, call_next):
     if request.url.path != "/v1/audio/speech":
         return await call_next(request)
-    start = time.perf_counter()
+    started = time.perf_counter()
     status = "500"
     try:
         response = await call_next(request)
@@ -44,7 +57,7 @@ async def measure(request: Request, call_next):
         return response
     finally:
         REQUESTS.labels(status).inc()
-        LATENCY.observe(time.perf_counter() - start)
+        LATENCY.observe(time.perf_counter() - started)
 
 
 @app.get("/metrics")
@@ -52,40 +65,32 @@ def metrics():
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
-class SpeechRequest(BaseModel):
-    input: str
-    model: str | None = None  # accepted and ignored
-    voice: str | None = None  # accepted and ignored (one voice is loaded)
-    response_format: str | None = "wav"  # Piper makes WAV only
-    speed: float | None = None
-
-
 @app.get("/health")
 def health():
-    return {"status": "ok", "voice": os.path.basename(VOICE_PATH)}
+    return {"status": "ok", "voice": os.path.basename(VOICE_FILE)}
+
+
+def synthesize(text: str, speed: float | None) -> bytes:
+    command = [
+        sys.executable, "-m", "piper", "--model", VOICE_FILE,
+        "--sentence-silence", SENTENCE_SILENCE, "--output-file", "-",
+    ]
+    if speed and speed > 0:
+        command += ["--length-scale", str(round(1.0 / speed, 3))]  # larger scale is slower
+    with _slots:
+        result = subprocess.run(
+            command, input=text.encode("utf-8"), capture_output=True,
+            env={**os.environ, "OMP_NUM_THREADS": CPU_THREADS},
+        )
+    if result.returncode != 0 or not result.stdout:
+        error = result.stderr.decode("utf-8", "replace")[:500]
+        raise HTTPException(status_code=500, detail=f"piper failed (code {result.returncode}): {error}")
+    return result.stdout
 
 
 @app.post("/v1/audio/speech")
-def speech(req: SpeechRequest):
-    text = (req.input or "").strip()
+def speech(request: SpeechRequest):
+    text = (request.input or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="empty input")
-
-    cmd = [
-        sys.executable, "-m", "piper", "--model", VOICE_PATH,
-        "--sentence-silence", SENTENCE_SILENCE, "--output-file", "-",
-    ]
-    if req.speed and req.speed > 0:
-        cmd += ["--length-scale", str(round(1.0 / req.speed, 3))]
-
-    with _slot:
-        proc = subprocess.run(
-            cmd, input=text.encode("utf-8"), capture_output=True,
-            env={**os.environ, "OMP_NUM_THREADS": os.getenv("PIPER_OMP_THREADS", "2")},
-        )
-    if proc.returncode != 0 or not proc.stdout:
-        raise HTTPException(
-            status_code=500,
-            detail=f"piper failed (rc={proc.returncode}): {proc.stderr.decode('utf-8', 'replace')[:500]}",
-        )
-    return Response(content=proc.stdout, media_type="audio/wav")
+    return Response(content=synthesize(text, request.speed), media_type="audio/wav")

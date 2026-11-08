@@ -20,4 +20,5 @@
 - Round trip in Docker on the Mac: TTS made speech for "hello world", STT returned `Hello World!`.
 - The manifest passes `kubeconform -strict`. This checks the schema only.
 - Open: build the images on the x86 machine, import them into k3s, deploy, and run the round trip in the cluster.
+- Settings use our own names: `STT_*` and `TTS_*` environment variables. The transcription route is a normal `def` route, so `/health` answers during a long transcription (checked in Docker: 2 ms during a 3.6 s transcription).
 - The base image uses the tag `python:3.12-slim` (not a digest). Python packages are pinned.
