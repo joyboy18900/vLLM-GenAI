@@ -53,7 +53,7 @@ measured yet (see `docs/setup.md`, section "Thai TTS").
 | Runs on | CPU | CPU |
 | Size | 63 MB | about 326 MB |
 | Sample rate | 22.05 kHz | not checked |
-| License of the code | MIT (Piper) | Apache-2.0 |
+| License of the code | GPL-3.0 (`piper-tts` 1.8.0, from PyPI and the repository) | Apache-2.0 |
 | License of the voice data or weights | CC BY-NC-SA 3.0, non-commercial (from the model card of the voice) | not stated in the release notes or the README |
 | Needs | Piper 1.8 or newer (we use 1.8.0) | a new server in this repository |
 | Time to first audio | not measured yet | not measured yet |
