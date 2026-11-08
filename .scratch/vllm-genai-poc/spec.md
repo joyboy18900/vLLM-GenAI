@@ -108,8 +108,8 @@ The repository follows the reference project: the same folder layout, the same d
 ## Implementation Decisions
 
 - **Reference first.** The structure, documents, and concepts come from the reference project. Change only what the decisions below require. Code and manifests from the reference can be adapted where they fit.
-- **Machine.** One Ubuntu PC (bare metal): AMD Ryzen 7 8700F, 32GB RAM, RTX 4070 SUPER 12GB (Ada). The desktop display uses the same GPU. The Mac is used only to edit code and run commands remotely. There is no k3s and no model serving on the Mac.
-- **EC2.** Not used now. The documents describe it as an option, without an instance type name. They list what to check when the GPU is not the RTX 4070 SUPER: fp8 and bf16 support, VRAM size, quota, cost, and HTTPS or SSH tunnel for the microphone.
+- **Machine.** One Ubuntu PC (bare metal): AMD Ryzen 7 8700F, 32GB RAM, RTX 4070 SUPER 12GB (Ada). The desktop display uses the same GPU. The Mac is used only to edit code and run commands remotely. There is no k3s and no model serving on the Mac. The PC runs Windows now (a plain Windows install, not a dual boot). The first full test runs on this PC after Ubuntu is installed on it again, or on an EC2 GPU instance if the PC is not ready.
+- **EC2.** The backup test machine. The documents describe it as an option, without an instance type name. They list what to check when the GPU is not the RTX 4070 SUPER: fp8 and bf16 support, VRAM size, quota, cost, and HTTPS or SSH tunnel for the microphone. The scope of the project does not change: the same stack and the same steps run on the PC or on EC2.
 - **Model.** Qwen3.5-4B in bf16 as the baseline. Thinking mode off by default. Use the text-only option if the vision encoder takes needed VRAM. Check vLLM support for this model and record the real VRAM numbers in the first serving step.
 - **Quantization.** No NVFP4. AWQ/GPTQ are the quantization methods. The RTX 4070 SUPER also supports fp8 weights and fp8 KV cache, which are measured in the benchmarks.
 - **Speech.** faster-whisper and Piper on CPU, English voice, as in the reference. Both servers expose OpenAI-compatible audio APIs and a `/metrics` endpoint. Prefer prebuilt images over package installation at pod start.
@@ -141,7 +141,7 @@ The repository follows the reference project: the same folder layout, the same d
 - Feedback collection, Redis Streams, the retraining CronJob, LoRA + DPO training
 - ChatGPT features beyond the reference: RAG, web search, memory, image input, image generation, multi-user login
 - k3s or model serving on the Mac
-- Running on EC2 (documented only)
+- A permanent EC2 deployment or automation for it (EC2 is a documented backup for the test run)
 - CI, a license file, Terraform or other infrastructure-as-code
 - Thai voice as a requirement (it is a bonus at the end)
 
