@@ -180,6 +180,9 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
    and the Open WebUI pod. Left: vLLM with Qwen2.5-3B-Instruct, standalone and on k3s (VRAM and KV cache, start, a chat through the Service, a restart
    without a new download), the monitoring pods (DCGM may not work on WSL2), chat and voice in the
    browser, the benchmark and the levers (to choose the final vLLM flags), and the smoke test.
+   The copy of the project on the PC and the Deployments in k3s are older than this repository (they
+   still use the first model). Send the project again and apply the manifests again before you start
+   (see "Get the code into WSL2 without a push" in `docs/setup.md`).
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
    cannot: DCGM, the HTTPS Ingress, and the NodePort. Fill the PC spec table again.
 3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check
