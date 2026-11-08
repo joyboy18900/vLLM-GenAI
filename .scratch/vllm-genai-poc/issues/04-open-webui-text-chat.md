@@ -1,6 +1,6 @@
 # 04: Open WebUI text chat
 
-**What to build:** Open WebUI runs in the cluster and uses the `vllm` Service. The user opens it in a browser (through an SSH tunnel from the Mac to `localhost`) and has a streamed text chat with Qwen3.5-4B.
+**What to build:** Open WebUI runs in the cluster and uses the `vllm` Service. The user opens it in a browser (through an SSH tunnel from the Mac to `localhost`) and has a streamed text chat with Qwen2.5-3B-Instruct.
 
 **Blocked by:** 03
 

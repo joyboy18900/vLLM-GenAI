@@ -1,18 +1,18 @@
 # 02: vLLM standalone on the PC
 
-**What to build:** vLLM serves Qwen3.5-4B directly on the PC (outside Kubernetes). A `curl` chat completion returns an answer. The real VRAM use is measured and replaces the estimates in CLAUDE.md.
+**What to build:** vLLM serves Qwen2.5-3B-Instruct directly on the PC (outside Kubernetes). A `curl` chat completion returns an answer. The real VRAM use is measured and replaces the estimates in CLAUDE.md.
 
 **Blocked by:** 01
 
 **Status:** ready-for-agent
 
-**Test status:** ran on WSL2 on 2026-11-08 (not on Ubuntu, so no box is ticked). vLLM v0.28.0 serves Qwen3.5-4B in bf16. The API checks, thinking off, and tool calling passed. VRAM is measured (see `docs/benchmarks.md`). The final flag is `--gpu-memory-utilization 0.89`. Repeat on Ubuntu or EC2.
+**Test status:** ran on WSL2 on 2026-11-08 with an earlier model (Qwen3.5-4B). The model is now Qwen2.5-3B-Instruct and has not run yet. No box is ticked. The numbers of the earlier try are in `docs/benchmarks.md`.
 
-- [ ] vLLM version pinned, Qwen3.5-4B served in bf16 through the OpenAI-compatible API
-- [ ] Thinking mode off by default, tool calling enabled with the correct parser for the model
+- [ ] vLLM version pinned, Qwen2.5-3B-Instruct served in fp16 through the OpenAI-compatible API
+- [ ] Tool calling enabled with the hermes parser
 - [ ] `curl` to `/v1/models` lists the model, and `curl` to `/v1/chat/completions` returns a non-empty answer (stream and non-stream)
 - [ ] VRAM measured: weights, KV cache size (tokens and max concurrency from the vLLM log), desktop display use
-- [ ] If the KV cache is too small, the text-only option or fp8 weights are tested and the choice is recorded
+- [ ] If the KV cache is too small, the fp8 KV cache or AWQ is tested and the choice is recorded
 - [ ] The VRAM budget table in CLAUDE.md shows the measured numbers
 - [ ] The setup runbook and the benchmarks document record the commands and numbers
 - [ ] The standalone process is stopped and the GPU is free at the end

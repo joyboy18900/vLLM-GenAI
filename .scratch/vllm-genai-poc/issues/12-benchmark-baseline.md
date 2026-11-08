@@ -12,4 +12,4 @@
 - [ ] Concurrency 1, 8, and 16, with warmup and a fixed seed
 - [ ] Fixed quality prompt set (English and Thai) checked at temperature 0
 - [ ] Raw results saved, summary table generated from them (no hand-typed numbers)
-- [ ] Baseline (bf16, default flags) recorded in the benchmarks document with vLLM version, driver, model, and flags
+- [ ] Baseline (fp16, plain engine flags) recorded in the benchmarks document with vLLM version, driver, model, and flags

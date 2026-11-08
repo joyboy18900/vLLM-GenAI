@@ -12,7 +12,7 @@ I found a good reference project, [PoonpipatChangkwain/vLLM-chatBOT](https://git
 
 A single-node k3s cluster on my Ubuntu PC (RTX 4070 SUPER 12GB) that runs:
 
-- vLLM serving Qwen3.5-4B through the OpenAI-compatible API
+- vLLM serving Qwen2.5-3B-Instruct through the OpenAI-compatible API
 - Open WebUI as the chat frontend, with text chat and voice call mode
 - faster-whisper (STT) and Piper (TTS) on CPU, behind OpenAI-compatible audio APIs, so voice mode works in English
 - A full monitoring and observability stack: Prometheus, Grafana, Loki, Alertmanager, DCGM exporter, Node Exporter, kube-state-metrics, and `/metrics` on vLLM, STT, and TTS
@@ -33,9 +33,9 @@ The repository follows the reference project: the same folder layout, the same d
 
 ### LLM serving
 7. As the operator, I want to run vLLM alone on the PC first, so that I can tune its flags before I add Kubernetes.
-8. As the operator, I want vLLM to serve Qwen3.5-4B, so that the chatbot uses a current Qwen model.
+8. As the operator, I want vLLM to serve Qwen2.5-3B-Instruct, so that the chatbot uses a Qwen model that fits the 12 GB GPU with room for the KV cache.
 9. As the operator, I want the real VRAM budget measured on the 12GB GPU (weights, KV cache, desktop display), so that the estimates in CLAUDE.md are replaced with facts.
-10. As the operator, I want thinking mode off by default, so that replies, and voice replies in particular, start fast.
+10. As the operator, I want tool calling enabled with the hermes parser, so that the `tool_choice: auto` requests of Open WebUI work.
 11. As the operator, I want tool calling enabled with the correct parser for the model, so that Open WebUI requests do not fail.
 12. As the operator, I want vLLM deployed as a k3s Deployment with a ClusterIP Service, so that other pods reach it by name.
 13. As the operator, I want the vLLM Deployment to use the Recreate strategy, so that a new pod never waits for the one GPU that the old pod holds.
@@ -111,7 +111,7 @@ The repository follows the reference project: the same folder layout, the same d
 - **Machine.** One Ubuntu PC (bare metal): AMD Ryzen 7 8700F, 32GB RAM, RTX 4070 SUPER 12GB (Ada). The desktop display uses the same GPU. The Mac is used only to edit code and run commands remotely. There is no k3s and no model serving on the Mac. The PC runs Windows now (a plain Windows install, not a dual boot). The first full test runs on this PC after Ubuntu is installed on it again, or on an EC2 GPU instance if the PC is not ready.
 - **EC2.** The backup test machine. The documents describe it as an option, without an instance type name. They list what to check when the GPU is not the RTX 4070 SUPER: fp8 and bf16 support, VRAM size, quota, cost, and HTTPS or SSH tunnel for the microphone. The scope of the project does not change: the same stack and the same steps run on the PC or on EC2.
 - **Rehearsal.** A first run in WSL2 on the PC may find mistakes early. Its results are labeled "WSL2". They do not replace the test on Ubuntu or on EC2. The scope of the project does not change.
-- **Model.** Qwen3.5-4B in bf16 as the baseline. Thinking mode off by default. Use the text-only option if the vision encoder takes needed VRAM. Check vLLM support for this model and record the real VRAM numbers in the first serving step.
+- **Model.** Qwen2.5-3B-Instruct in fp16 with the flag set of `k8s/vllm-deployment.yaml`. Record the real VRAM numbers (weights and KV cache) in the first serving step. The first model was Qwen3.5-4B. It left little KV cache on the 12 GB GPU, so the model was changed.
 - **Quantization.** No NVFP4. AWQ/GPTQ are the quantization methods. The RTX 4070 SUPER also supports fp8 weights and fp8 KV cache, which are measured in the benchmarks.
 - **Speech.** faster-whisper and Piper on CPU, English voice, as in the reference. Both servers expose OpenAI-compatible audio APIs and a `/metrics` endpoint. Prefer prebuilt images over package installation at pod start.
 - **Frontend.** Open WebUI with a pinned image version. Use its built-in voice call mode. No custom UI.
