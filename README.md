@@ -170,6 +170,27 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | Feedback pipeline (Redis Streams) | Planned, not built |
 | Weekly retraining (LoRA and DPO) | Planned, not built |
 
-Next: finish the checks on the PC, then repeat them on bare-metal Ubuntu or EC2.
+
+## What is left
+
+The code and the documents are written. What is left is to run and check the stack, in three runs.
+Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
+
+1. **PC, WSL2 (partly done).** Done: the GPU node, vLLM standalone (VRAM measured), the speech pods,
+   and the Open WebUI pod. Left: the vLLM pod on k3s (start, a chat through the Service, a restart
+   without a new download), the monitoring pods (DCGM may not work on WSL2), chat and voice in the
+   browser, the benchmark and the levers (to choose the final vLLM flags), and the smoke test.
+2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
+   cannot: DCGM, the HTTPS Ingress, and the NodePort. Fill the PC spec table again.
+3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check
+   the differences in "If you run on EC2" (fp8 and bf16 support, VRAM, quota, cost).
+
+After each run: tick the boxes of the tickets that passed, update the status tables (this README,
+`docs/setup.md`, `docs/benchmarks.md`), and put the final vLLM flags in `k8s/vllm-deployment.yaml`.
+
+Small items that are not test runs:
+- Fix the arrows in the monitoring box of `docs/workflow.png` (the notes are in ticket 16).
+- Thai TTS (bonus): run `bench/thai_tts`, listen, and choose a voice (ticket 18).
+- When the PC runs are over, remove the SSH access (see "Remote access" in `docs/setup.md`).
 
 > This project is for practice of infra and scheduling. It is not a production system.
