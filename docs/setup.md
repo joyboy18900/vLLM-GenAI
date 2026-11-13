@@ -250,11 +250,11 @@ pins `av==15.1.0` for this reason.
 
 ## vLLM on k3s
 
-Status: applied on WSL2 on 2026-11-08 with an earlier model (Qwen3.5-4B), result not seen. The
-Deployment, the Service, and the PVC were created. The SSH connection dropped while the script waited
-for the pod, so the start of the pod, the chat completion through the Service, and the restart
-check are not tested. The vLLM image was imported into k3s from Docker in 211 s. The Deployment
-now uses Qwen2.5-3B-Instruct, and this model has not run on k3s yet.
+Status: ran on WSL2 on 2026-11-13 with Qwen2.5-3B-Instruct. The pod became ready (about 72 s on the
+first start and about 51 s after a restart, with the model in the cache). From a pod in the cluster,
+the Service `vllm` returned `/v1/models`, a chat completion (normal and stream), and a tool call
+(hermes parser). The restart came back without a new download. The numbers are in
+`docs/benchmarks.md`. The vLLM image was imported into k3s from Docker in 211 s.
 
 ### Deploy
 
@@ -265,7 +265,48 @@ kubectl apply -f k8s/vllm-deployment.yaml -f k8s/vllm-service.yaml
 kubectl rollout status deploy/vllm-qwen --timeout=20m
 ```
 
-The first start downloads the model to the `vllm-cache` PVC.
+The first start downloads the model (about 6 GiB) to the `vllm-cache` PVC. The startup probe waits
+10 minutes. On a slow network, the download can take longer, and the probe then restarts the pod.
+
+### Download the model first
+
+On a slow network, put the model in the cache before the pod starts. Scale the pod down (one GPU,
+and the PVC allows one user), then run a pod that uses the same image and the same PVC:
+
+```bash
+kubectl scale deploy/vllm-qwen --replicas=0
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: Pod
+metadata:
+  name: model-dl
+spec:
+  restartPolicy: Never
+  enableServiceLinks: false
+  containers:
+    - name: dl
+      image: docker.io/vllm/vllm-openai:v0.28.0
+      imagePullPolicy: IfNotPresent
+      command: ["hf", "download", "Qwen/Qwen2.5-3B-Instruct"]
+      env:
+        - name: HF_HOME
+          value: /cache/hf
+      volumeMounts:
+        - name: cache
+          mountPath: /cache
+  volumes:
+    - name: cache
+      persistentVolumeClaim:
+        claimName: vllm-cache
+EOF
+kubectl wait --for=jsonpath='{.status.phase}'=Succeeded pod/model-dl --timeout=60m
+kubectl delete pod model-dl
+kubectl scale deploy/vllm-qwen --replicas=1
+```
+
+A download that the probe killed leaves `*.incomplete` files in
+`hf/hub/models--Qwen--Qwen2.5-3B-Instruct/blobs/` on the PVC. A new download does not reuse them.
+Delete them after the download is complete.
 
 ### Check
 
@@ -283,7 +324,7 @@ Restart check. The pod must come back ready without a new download:
 
 ```bash
 kubectl rollout restart deploy/vllm-qwen && kubectl rollout status deploy/vllm-qwen
-kubectl logs deploy/vllm-qwen | grep -i download   # expected: no new download
+kubectl logs deploy/vllm-qwen --tail=-1 | grep -E 'Fetching|Downloading'   # expected: no output
 ```
 
 ## Open WebUI text chat

@@ -16,8 +16,29 @@ is "WSL2". They do not replace the runs on Ubuntu or EC2.
 
 ## VRAM (ticket 02)
 
-Not measured yet with Qwen2.5-3B-Instruct. Ticket 02 measures the weights, the KV cache size (tokens
-and maximum concurrency from the vLLM log), and the desktop display use.
+### Qwen2.5-3B-Instruct, fp16 (WSL2, k3s pod)
+
+Measured on 2026-11-13 in the k3s pod, with the flags of `k8s/vllm-deployment.yaml` (utilization
+0.80, max-model-len 8192, max-num-seqs 16). The model was in the cache already (see "Download the
+model first" in `docs/setup.md`). The standalone run of ticket 02 is not done.
+
+| Item | Value | Source |
+|---|---|---|
+| Desktop display, before vLLM | 799 MiB | `nvidia-smi` |
+| Checkpoint size | 5.75 GiB | vLLM log: "Checkpoint size" |
+| Weights in VRAM | 5.79 GiB | vLLM log: "Model loading took" |
+| KV cache, first start (empty compile cache) | 2.26 GiB, 65,920 tokens, 8.05x concurrency for 8,192 tokens | vLLM log |
+| KV cache, next start (compile cache present) | 3.26 GiB, 94,976 tokens, 11.59x concurrency for 8,192 tokens | vLLM log |
+| Total VRAM in use, vLLM idle (next start) | 11,038 MiB of 12,282 MiB (this includes the desktop) | `nvidia-smi` |
+| Time to ready, first start / next start | about 72 s / about 51 s (torch.compile: 12.22 s / 0.28 s) | polling the pod, vLLM log |
+
+The first start has less KV cache because the compile step uses more memory: 6.55 GiB of non-torch
+memory and 0.78 GiB of peak activation, against 5.99 GiB and 0.35 GiB on the next start. Use the
+second row for planning. The KV cache is 3.5 times the 0.92 GiB of the earlier try below.
+
+The download of the model (a one-time step) took 5 minutes 25 seconds. The first try inside the pod
+ran at about 2 MB/s and did not finish in the 10-minute startup window, so the pod was restarted by
+the startup probe.
 
 ### Earlier try: Qwen3.5-4B (WSL2)
 
