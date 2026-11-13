@@ -215,17 +215,28 @@ Added after the final choice, to test a case that the `chat` workload does not c
 earlier turns in it. The file is `bench/prompts/multiturn_prompts.jsonl` (8 conversations, 82 to 129 words
 each, in English). The turns go into one user message as a transcript, and some last questions ask the
 model to rewrite or summarize what it said before. Run with `WORKLOADS=multiturn bench/run.sh <label>`.
-Only `baseline` is measured. `spec_ngram` is not measured on this workload yet.
+`baseline` and `spec_ngram` are measured (the Deployment was set to `spec_ngram` for the run and
+set back to `baseline` after it).
 
 | config | conc | TTFT p50 (ms) | TPOT p50 (ms) | out tok/s | done | failed |
 |---|---|---|---|---|---|---|
 | `baseline` | 1 | 21.7 | 14.5 | 68.7 | 24 | 0 |
+| `spec_ngram` | 1 | 21.5 | 15.3 | 69.8 | 24 | 0 |
 | `baseline` | 8 | 47.1 | 14.8 | 530.7 | 96 | 0 |
+| `spec_ngram` | 8 | 38.2 | 17.2 | 458.1 | 96 | 0 |
 | `baseline` | 16 | 62.4 | 15.3 | 1018.5 | 160 | 0 |
+| `spec_ngram` | 16 | 41.0 | 18.7 | 839.3 | 160 | 0 |
 
-The numbers are close to those of `chat` (68.7, 529.3, and 1028.6 out tok/s). The engine spends its time
-on the decode, and these prompts are still short, so the history adds little prefill work. This
-table does not answer if n-gram decoding wins here. For that, run `spec_ngram` with the same workload.
+What the numbers show:
+- `baseline` on this workload is close to `baseline` on `chat` (68.7, 529.3, and 1028.6 out tok/s).
+  The history is short, so it adds little prefill work.
+- N-gram decoding does not win here. At concurrency 1 the out tok/s is the same (+1.6%) and the TPOT p50
+  is 0.8 ms worse. At concurrency 8 and 16 the out tok/s is -14% and -18%, and the TPOT p50 is worse.
+- The TTFT of `spec_ngram` is lower at concurrency 8 and 16. This is not explained. Do not read it as a gain.
+- The accept rate of the guessed tokens is not read, so the run does not show how often n-gram guessed right.
+- `vllm bench serve` does not send `temperature=0` in this version, so the server default sampling
+  applies. This can lower the accept rate. It is not tested with `--temperature=0`.
+- Each run is one run. The prompts are 82 to 129 words, so the history is short.
 
 Final choice: `baseline` (fp16, utilization 0.85, max-model-len 8192, max-num-seqs 16, prefix caching), with `VLLM_USE_V2_MODEL_RUNNER=0` on WSL2. The Deployment and the configuration `deployed` use it.
 
@@ -237,7 +248,7 @@ Reasons:
 
 Limits of this choice:
 - The reasons use the numbers at concurrency 16. This project has one user, which is closer to concurrency 1. At concurrency 1, `spec_draft` is +14% and `awq` is +134% faster than `baseline`, and n-gram is 9% slower. The choice of `baseline` stands because it is the simplest and the reference, not because it is the fastest at concurrency 1.
-- The `chat` workload is 28 short single-turn prompts with `--ignore-eos`, and each configuration ran once. The spread between runs is not measured. The multi-turn case is only measured for `baseline` (see above).
+- The `chat` workload is 28 short single-turn prompts with `--ignore-eos`, and each configuration ran once. The spread between runs is not measured. The multi-turn case (see above) gives the same result for n-gram: no gain.
 - It is not known how much of the n-gram cost comes from wrong guesses and how much from the async scheduling that vLLM turns off with n-gram.
 - That the source project gets a gain from n-gram because it runs on a T4 is a guess. It is not tested.
 
