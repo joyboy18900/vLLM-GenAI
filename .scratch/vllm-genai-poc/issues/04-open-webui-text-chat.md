@@ -8,7 +8,7 @@
 
 **Test status:** deployed on WSL2 on 2026-11-08. The pod is ready and `/health` returns 200 through the Service. On 2026-11-13 a chat in the browser worked (an answer in English and Thai, follow-up suggestions, an automatic title), and a read-aloud click sent a request to the TTS pod (HTTP 200). The sound was not heard by the agent. The microphone and the voice mode are not tested. The restart check is not tested. No box is ticked.
 
-- [ ] Open WebUI image pinned to a version
+- [x] Open WebUI image pinned to a version
 - [ ] Configured by environment variables to use the `vllm` Service; Ollama off; first boot kept light (no auto model updates, no web search)
 - [ ] ClusterIP Service named `webui`, plus a NodePort for the SSH tunnel path
 - [ ] Data (chat history, settings) on a PersistentVolumeClaim; history survives a pod restart
