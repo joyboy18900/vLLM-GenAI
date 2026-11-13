@@ -270,8 +270,9 @@ The first start downloads the model (about 6 GiB) to the `vllm-cache` PVC. The s
 
 ### Download the model first
 
-On a slow network, put the model in the cache before the pod starts. Scale the pod down (one GPU,
-and the PVC allows one user), then run a pod that uses the same image and the same PVC:
+On a slow network, put the model in the cache before the pod starts. Scale the pod down, so that the
+startup probe does not restart it while the download runs. Then run a pod that uses the same image
+and the same PVC:
 
 ```bash
 kubectl scale deploy/vllm-qwen --replicas=0
