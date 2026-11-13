@@ -393,7 +393,7 @@ Status: ran on WSL2 on 2026-11-13. All 7 Prometheus targets were up (`prometheus
 `node-exporter`, `kube-state-metrics`, and two `speech`). The 36 dashboard queries and the 4 alert
 rules use metric names that exist in Prometheus (checked by script). After 12 chat requests, the vLLM
 counters moved (tokens, TTFT, inter-token latency, E2E latency, prefix cache, spec decode).
-Grafana answered 401 without a login. Not checked: the panels in the browser.
+Grafana answered 401 without a login. The panels were checked in the browser (see ticket 07).
 
 The stack runs in the `monitoring` namespace: Prometheus, Grafana, DCGM exporter, Node
 Exporter, and kube-state-metrics. The dashboard comes from code: `bench/gen_dash.py`.
@@ -806,6 +806,10 @@ The address is `localhost`, so the microphone works:
 kubectl port-forward svc/webui 8080:8080       # http://localhost:8080
 kubectl -n monitoring port-forward svc/grafana 3000:3000   # http://localhost:3000
 ```
+
+A `kubectl port-forward` can stop by itself. The page then shows "Failed to fetch" and the chat does not
+answer, although the pods are fine. Start the command again. For a long session, run each command in a
+loop: `while true; do kubectl port-forward svc/webui 8080:8080; sleep 1; done`.
 
 ### Observed on WSL2
 

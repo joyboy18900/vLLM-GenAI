@@ -15,7 +15,7 @@ On the PC, in k3s, at the time of the stop:
   in the `vllm-cache` PVC, so a restart does not download it again.
 - The monitoring pods run (checked on 2026-11-13): all 7 Prometheus targets are up, DCGM works on
   WSL2, and the alert test passed. `node-exporter` needs `mount --make-rshared /` as root in WSL2
-  after each boot of WSL2. Not looked at yet: the dashboard panels in the browser.
+  after each boot of WSL2. The dashboard panels were looked at in the browser and show data.
 - The benchmark ran on 2026-11-13 (6 of 9 configurations, see `docs/benchmarks.md`). The Deployment
   uses the final flags of `k8s/vllm-deployment.yaml`. The raw results are in `bench/results/` (it is
   not in git) on the PC copy and on the Mac.
@@ -31,8 +31,8 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
    with Qwen2.5-3B-Instruct on k3s (VRAM and KV cache, start, a chat through the Service, a restart
    without a new download), vLLM standalone (ticket 02), the monitoring pods, and the benchmark of 6
    configurations. The final flags are chosen (`baseline`, see `docs/benchmarks.md`) and the smoke test passed
-   with them (10 of 10, `--no-https`). Left: the dashboard panels in the browser, and chat and voice in the
-   browser. Before you start, send the
+   with them (10 of 10, `--no-https`). Chat in the browser and read-aloud work. Left: the microphone and the voice mode in
+   the browser (they need a real microphone). Before you start, send the
    project to the PC again if the repository changed (see "Get the code into WSL2 without a push" in
    `docs/setup.md`).
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2

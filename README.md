@@ -160,9 +160,9 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | GPU node: NVIDIA Container Toolkit, Docker, k3s, device plugin, GPU test pod | Ran on WSL2: the node reports `nvidia.com/gpu: 1` and a pod runs `nvidia-smi` |
 | vLLM standalone (in Docker) | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and tool calls worked, and the VRAM numbers equal those of the k3s pod |
 | STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac. Ran on k3s in WSL2: the round trip returned "Hello World!" |
-| Open WebUI | Pod ready on k3s in WSL2, `/health` answers. Chat in the browser is not tested |
+| Open WebUI | Ran on k3s in WSL2: a chat in the browser worked, and read-aloud reached the TTS pod. The microphone and the voice mode are not tested |
 | vLLM on k3s | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and a tool call through the Service, and a restart without a new download. VRAM and KV cache are in `docs/benchmarks.md` |
-| Monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Ran on k3s in WSL2: all 7 targets up (DCGM works), vLLM metrics move, Loki returns the logs of the pods, and `TargetDown` fired and resolved. The panels in the browser are not looked at |
+| Monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Ran on k3s in WSL2: all 7 targets up (DCGM works), vLLM metrics move, Loki returns the logs of the pods, and `TargetDown` fired and resolved. The dashboard panels in Grafana show data |
 | Voice mode in the browser, HTTPS Ingress | Written, not tested |
 | Benchmark harness, lever script | Ran on k3s in WSL2 (6 of 9 configurations). The smoke test passed 10 of 10 checks with `--no-https` |
 | Benchmark numbers (latency, throughput, levers) | Measured for `baseline`, `ngram_chunked`, `spec_ngram`, `spec_draft`, `compile`, and `awq`. `sched`, `kv_fp8`, and `min_latency` do not start at utilization 0.92. The final flags are chosen: `baseline` (see `docs/benchmarks.md`) |
