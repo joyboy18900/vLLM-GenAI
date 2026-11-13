@@ -162,7 +162,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac. Ran on k3s in WSL2: the round trip returned "Hello World!" |
 | Open WebUI | Pod ready on k3s in WSL2, `/health` answers. Chat in the browser is not tested |
 | vLLM on k3s | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and a tool call through the Service, and a restart without a new download. VRAM and KV cache are in `docs/benchmarks.md` |
-| Monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Applied on k3s in WSL2. The result was not checked. Config checks passed (`kubeconform`, `promtool`, `amtool`, `loki -verify-config`) |
+| Monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Ran on k3s in WSL2: all 7 targets up (DCGM works), vLLM metrics move, Loki returns the logs of the pods, and `TargetDown` fired and resolved. The panels in the browser are not looked at |
 | Voice mode in the browser, HTTPS Ingress | Written, not tested |
 | Benchmark harness, lever script, smoke test | Written, logic tested with fake data. Not run on the cluster |
 | Benchmark numbers (latency, throughput, levers) | Not measured yet |

@@ -13,8 +13,9 @@ On the PC, in k3s, at the time of the stop:
 - The speech pods and the Open WebUI pod ran and passed their checks.
 - vLLM runs with Qwen2.5-3B-Instruct (checked on 2026-11-13, see `docs/benchmarks.md`). The model is
   in the `vllm-cache` PVC, so a restart does not download it again.
-- The monitoring manifests were applied, but nobody checked the result. After the WSL2 restart, some
-  pods showed `0/1` (for example `node-exporter` had `CreateContainerError`).
+- The monitoring pods run (checked on 2026-11-13): all 7 Prometheus targets are up, DCGM works on
+  WSL2, and the alert test passed. `node-exporter` needs `mount --make-rshared /` as root in WSL2
+  after each boot of WSL2. Not looked at yet: the dashboard panels in the browser.
 - The copy of the project on the PC equals the repository (commit `7a09a4e`). It has one file that is
   not tracked: `docs/diagram-prompt.md`.
 - The SSH server and the firewall rule for it are still enabled on the PC.
@@ -25,8 +26,8 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 
 1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods, the Open WebUI pod, and vLLM
    with Qwen2.5-3B-Instruct on k3s (VRAM and KV cache, start, a chat through the Service, a restart
-   without a new download). Left: vLLM standalone (ticket 02), the monitoring pods (DCGM may not work
-   on WSL2), chat and voice in the browser, the benchmark and the configurations in
+   without a new download) and the monitoring pods. Left: vLLM standalone (ticket 02), the dashboard
+   panels in the browser, chat and voice in the browser, the benchmark and the configurations in
    `bench/levers.py` (to choose the final vLLM flags), and the smoke test. Before you start, send the
    project to the PC again if the repository changed (see "Get the code into WSL2 without a push" in
    `docs/setup.md`).
@@ -83,3 +84,9 @@ The owner keeps these facts outside the repository. Ask the owner.
   - The shell of the Mac (zsh) does not split a variable that holds a command. Use a function.
   - `--gpu-memory-utilization` must stay below the free VRAM at the start. The Windows desktop uses
     about 1 GiB of the 12 GiB.
+  - The WSL2 VM stops when no session is open, and k3s stops with it. Every pod restarts at the next
+    connection. For a long run, keep a session open from the Mac:
+    `ssh ... 'wsl -d Ubuntu-24.04 -- sleep infinity'` (in the background).
+  - `kubectl logs -l <selector>` shows only the last 10 lines. Add `--tail=-1`, or use `deploy/<name>`.
+  - After a restart of the VM, `kubectl get pods` can list old pods as `Completed` or `Unknown`. They
+    are stale records. Delete them (`--force --grace-period=0` for `Unknown`).
