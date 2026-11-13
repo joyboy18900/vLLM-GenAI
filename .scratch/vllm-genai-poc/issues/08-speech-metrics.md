@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** `/metrics` on both servers tested in Docker on a Mac. On WSL2 on 2026-11-13, Prometheus showed both `speech` targets up, and the dashboard has the row "Speech (STT and TTS)". The round trip is not checked yet (the smoke test of ticket 14 does it).
+**Test status:** `/metrics` on both servers tested in Docker on a Mac. On WSL2 on 2026-11-13, Prometheus showed both `speech` targets up, and the dashboard has the row "Speech (STT and TTS)". The smoke test of ticket 14 passed the round trip ("hello world"). Its effect in the panels is not looked at in the browser.
 
 - [x] STT and TTS expose request count and latency histograms on `/metrics`
 - [x] Prometheus scrapes both; targets up

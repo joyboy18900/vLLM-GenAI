@@ -32,7 +32,8 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
    without a new download), vLLM standalone (ticket 02), the monitoring pods, and the benchmark of 6
    configurations. Left: the choice of the final vLLM flags (open questions: keep n-gram decoding, AWQ,
    and a lower utilization for the three configurations that need 0.92), the dashboard panels in the
-   browser, chat and voice in the browser, and the smoke test. Before you start, send the
+   browser, and chat and voice in the browser. The smoke test passed (10 of 10, `--no-https`) with the
+   arguments of the repository. Run it again after the final flags. Before you start, send the
    project to the PC again if the repository changed (see "Get the code into WSL2 without a push" in
    `docs/setup.md`).
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
