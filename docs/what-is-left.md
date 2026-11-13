@@ -11,21 +11,25 @@ not tested. The README has the status table.
 
 On the PC, in k3s, at the time of the stop:
 - The speech pods and the Open WebUI pod ran and passed their checks.
-- The vLLM Deployment and the monitoring manifests were applied, but nobody checked the result.
-- The Deployments still use the first model (Qwen3.5-4B). The repository now uses Qwen2.5-3B-Instruct.
-- The copy of the project on the PC is older than the repository.
+- vLLM runs with Qwen2.5-3B-Instruct (checked on 2026-11-13, see `docs/benchmarks.md`). The model is
+  in the `vllm-cache` PVC, so a restart does not download it again.
+- The monitoring manifests were applied, but nobody checked the result. After the WSL2 restart, some
+  pods showed `0/1` (for example `node-exporter` had `CreateContainerError`).
+- The copy of the project on the PC equals the repository (commit `7a09a4e`). It has one file that is
+  not tracked: `docs/diagram-prompt.md`.
 - The SSH server and the firewall rule for it are still enabled on the PC.
 
 ## The three runs
 
 Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 
-1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods, and the Open WebUI pod. Left:
-   vLLM with Qwen2.5-3B-Instruct, standalone and on k3s (VRAM and KV cache, start, a chat through the
-   Service, a restart without a new download), the monitoring pods (DCGM may not work on WSL2), chat
-   and voice in the browser, the benchmark and the configurations in `bench/levers.py` (to choose the
-   final vLLM flags), and the smoke test. Before you start, send the project to the PC again and apply
-   the manifests again (see "Get the code into WSL2 without a push" in `docs/setup.md`).
+1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods, the Open WebUI pod, and vLLM
+   with Qwen2.5-3B-Instruct on k3s (VRAM and KV cache, start, a chat through the Service, a restart
+   without a new download). Left: vLLM standalone (ticket 02), the monitoring pods (DCGM may not work
+   on WSL2), chat and voice in the browser, the benchmark and the configurations in
+   `bench/levers.py` (to choose the final vLLM flags), and the smoke test. Before you start, send the
+   project to the PC again if the repository changed (see "Get the code into WSL2 without a push" in
+   `docs/setup.md`).
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
    cannot: DCGM, the HTTPS Ingress, and the NodePort. Fill the PC spec table again.
 3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check

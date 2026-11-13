@@ -149,7 +149,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 - [`CLAUDE.md`](CLAUDE.md): the project overview and all design decisions.
 - [`docs/GUIDE.md`](docs/GUIDE.md): how a request moves through the system, and how to read the dashboard.
 - [`docs/setup.md`](docs/setup.md): the setup runbook, in order, with a check after each step.
-- [`docs/benchmarks.md`](docs/benchmarks.md): the benchmark results (the VRAM is measured on WSL2, the latency numbers wait for the benchmark run).
+- [`docs/benchmarks.md`](docs/benchmarks.md): the benchmark results (the VRAM of Qwen2.5-3B-Instruct is measured on WSL2, the latency numbers wait for the benchmark run).
 
 ---
 
@@ -161,7 +161,8 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | vLLM standalone (in Docker) | Ran on WSL2 with an earlier model (Qwen3.5-4B): chat, stream, and tool calls worked. Not run yet with Qwen2.5-3B-Instruct |
 | STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac. Ran on k3s in WSL2: the round trip returned "Hello World!" |
 | Open WebUI | Pod ready on k3s in WSL2, `/health` answers. Chat in the browser is not tested |
-| vLLM on k3s, monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Applied on k3s in WSL2. The result was not checked. Config checks passed (`kubeconform`, `promtool`, `amtool`, `loki -verify-config`) |
+| vLLM on k3s | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and a tool call through the Service, and a restart without a new download. VRAM and KV cache are in `docs/benchmarks.md` |
+| Monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Applied on k3s in WSL2. The result was not checked. Config checks passed (`kubeconform`, `promtool`, `amtool`, `loki -verify-config`) |
 | Voice mode in the browser, HTTPS Ingress | Written, not tested |
 | Benchmark harness, lever script, smoke test | Written, logic tested with fake data. Not run on the cluster |
 | Benchmark numbers (latency, throughput, levers) | Not measured yet |

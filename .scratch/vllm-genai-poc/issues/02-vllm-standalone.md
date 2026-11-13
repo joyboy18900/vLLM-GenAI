@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** ran on WSL2 on 2026-11-08 with an earlier model (Qwen3.5-4B). The model is now Qwen2.5-3B-Instruct and has not run yet. No box is ticked. The numbers of the earlier try are in `docs/benchmarks.md`.
+**Test status:** ran on WSL2 on 2026-11-08 with an earlier model (Qwen3.5-4B). On 2026-11-13, Qwen2.5-3B-Instruct ran in the k3s pod (not standalone, see ticket 03). Its weights and KV cache are in `docs/benchmarks.md`. The standalone run is not done, so no box is ticked.
 
 - [ ] vLLM version pinned, Qwen2.5-3B-Instruct served in fp16 through the OpenAI-compatible API
 - [ ] Tool calling enabled with the hermes parser
