@@ -209,6 +209,24 @@ All values are from the tables on this page. Out tok/s is the output throughput.
 
 Preemptions: `baseline` 0, `ngram_chunked` 0, `spec_ngram` 0, `spec_draft` 0, `compile` 0, `awq` 0. No request failed in any run.
 
+### Multi-turn chat (workload `multiturn`)
+
+Added after the final choice, to test a case that the `chat` workload does not cover: a prompt with
+earlier turns in it. The file is `bench/prompts/multiturn_prompts.jsonl` (8 conversations, 82 to 129 words
+each, in English). The turns go into one user message as a transcript, and some last questions ask the
+model to rewrite or summarize what it said before. Run with `WORKLOADS=multiturn bench/run.sh <label>`.
+Only `baseline` is measured. `spec_ngram` is not measured on this workload yet.
+
+| config | conc | TTFT p50 (ms) | TPOT p50 (ms) | out tok/s | done | failed |
+|---|---|---|---|---|---|---|
+| `baseline` | 1 | 21.7 | 14.5 | 68.7 | 24 | 0 |
+| `baseline` | 8 | 47.1 | 14.8 | 530.7 | 96 | 0 |
+| `baseline` | 16 | 62.4 | 15.3 | 1018.5 | 160 | 0 |
+
+The numbers are close to those of `chat` (68.7, 529.3, and 1028.6 out tok/s). The engine spends its time
+on the decode, and these prompts are still short, so the history adds little prefill work. This
+table does not answer if n-gram decoding wins here. For that, run `spec_ngram` with the same workload.
+
 Final choice: `baseline` (fp16, utilization 0.85, max-model-len 8192, max-num-seqs 16, prefix caching), with `VLLM_USE_V2_MODEL_RUNNER=0` on WSL2. The Deployment and the configuration `deployed` use it.
 
 Reasons:
@@ -216,6 +234,12 @@ Reasons:
 - N-gram decoding helps `random` and costs 9% to 21% of `chat` throughput. The product is a chat.
 - Its answers are the reference for the quality check (14 of 14 for every lossless configuration).
 - Utilization 0.85 starts on this PC. 0.92 does not.
+
+Limits of this choice:
+- The reasons use the numbers at concurrency 16. This project has one user, which is closer to concurrency 1. At concurrency 1, `spec_draft` is +14% and `awq` is +134% faster than `baseline`, and n-gram is 9% slower. The choice of `baseline` stands because it is the simplest and the reference, not because it is the fastest at concurrency 1.
+- The `chat` workload is 28 short single-turn prompts with `--ignore-eos`, and each configuration ran once. The spread between runs is not measured. The multi-turn case is only measured for `baseline` (see above).
+- It is not known how much of the n-gram cost comes from wrong guesses and how much from the async scheduling that vLLM turns off with n-gram.
+- That the source project gets a gain from n-gram because it runs on a T4 is a guess. It is not tested.
 
 AWQ is the largest gain (+124% out tok/s of `chat` at concurrency 16), but 4 of 14 answers differ. It stays an option for multi-instance (see `CLAUDE.md`). `sched`, `kv_fp8`, and `min_latency` are not measured (they need utilization 0.92).
 

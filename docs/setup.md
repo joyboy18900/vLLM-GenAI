@@ -575,11 +575,12 @@ decoding (`kubectl set env deploy/vllm-qwen VLLM_USE_V2_MODEL_RUNNER=0`). Withou
 with `RuntimeError: UVA is not available`. Remove it after the run. A long run needs an open session to
 the PC (see "Remote access"), because WSL2 stops when no session is open.
 
-`bench/run.sh <label>` runs `vllm bench serve` inside the vLLM pod for three workloads at
+`bench/run.sh <label>` runs `vllm bench serve` inside the vLLM pod for four workloads at
 concurrency 1, 8, and 16. It uses seed 0, 3 warmup requests, 24, 96, and 160 prompts for
 concurrency 1, 8, and 16, and `--ignore-eos`. The workloads are random tokens (input 512, output 128,
 engine only), chat text (output 128), and a shared prefix (prefix 1024, input 256, output 128,
-prefix caching, concurrency 1 and 8 only). The chat text is the 28 prompts in `bench/prompts`. The
+prefix caching, concurrency 1 and 8 only), and chat with earlier turns in the prompt (`multiturn`, 8
+conversations). The chat text is the 28 prompts in `bench/prompts`. `WORKLOADS=multiturn bench/run.sh <label>` runs one workload. The
 flags come from the vLLM v0.28.0 source. Raw JSON goes to `bench/results/<label>/`. With
 `--max-num-seqs 16` the run at concurrency 16 is at the limit of the engine. Read the queue time
 and do not take it as a failure of a configuration.
