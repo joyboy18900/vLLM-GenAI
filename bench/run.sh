@@ -30,7 +30,13 @@ REMOTE="/tmp/bench/$LABEL"
 
 echo "pod: $POD  label: $LABEL"
 kubectl exec "$POD" -- mkdir -p "$REMOTE" /tmp/bench-data
-kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/chat_prompts.jsonl' < "$HERE/prompts/chat_prompts.jsonl"
+# The `custom` dataset needs pandas, which the vLLM image does not have. The `sharegpt` dataset
+# reads plain JSON. The reply text is not used: --sharegpt-output-len sets the output length.
+python3 -c 'import json, sys
+print(json.dumps([{"conversations": [{"from": "human", "value": json.loads(l)["prompt"]},
+                                     {"from": "gpt", "value": "-"}]} for l in sys.stdin if l.strip()]))' \
+  < "$HERE/prompts/chat_prompts.jsonl" \
+  | kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/chat_prompts.json'
 
 bench() { # name, concurrency, then the workload flags
   local name="$1" c="$2"; shift 2
@@ -47,7 +53,7 @@ for c in $CONCURRENCIES; do
     --dataset-name random --random-input-len 512 --random-output-len 128 --random-prefix-len 0 \
     --ignore-eos --backend openai --endpoint /v1/completions
   bench chat "$c" \
-    --dataset-name custom --dataset-path /tmp/bench-data/chat_prompts.jsonl --custom-output-len 128 \
+    --dataset-name sharegpt --dataset-path /tmp/bench-data/chat_prompts.json --sharegpt-output-len 128 \
     --ignore-eos --backend openai-chat --endpoint /v1/chat/completions
   case "$c" in 1|8)
     bench prefix "$c" \
