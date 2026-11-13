@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** written, untested. `bench/levers.py` builds the flags of each lever (checked offline against the v0.28.0 argument names). No measurement and no final flag set yet.
+**Test status:** measured on WSL2 on 2026-11-13: `baseline`, `deployed`, `spec_ngram`, `spec_draft`, `compile`, and `awq` (numbers in `docs/benchmarks.md`). Not measured: `sched`, `kv_fp8`, and `min_latency`. They use a utilization of 0.92, and vLLM does not start because the free VRAM at start is 10.79 GiB (0.92 needs 11.03 GiB). No configuration turns prefix caching off, so its own effect is not measured. The final flag set waits for the owner.
 
 - [ ] Configurations measured one at a time (`bench/levers.py`): AWQ, scheduler sizing, fp8 KV cache, n-gram and draft-model speculative decoding, compile mode, and the combination `min_latency`. Prefix caching is measured with the shared-prefix workload
 - [ ] For each lever: latency, throughput, VRAM, and quality result in the benchmarks document
