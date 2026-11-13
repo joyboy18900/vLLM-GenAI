@@ -111,9 +111,11 @@ kubectl delete pod gpu-test
 
 ## vLLM standalone on the PC
 
-Status: not run yet with this model. An earlier run on WSL2 used another model (Qwen3.5-4B). Its
-numbers are in `docs/benchmarks.md`, section "Earlier try". Run this section again with
-Qwen2.5-3B-Instruct and write the numbers in `docs/benchmarks.md`.
+Status: ran on WSL2 on 2026-11-13 with Qwen2.5-3B-Instruct, after the k3s run (the model was in the
+cache of the PVC already). The server was ready in 61 s. `/v1/models`, a chat completion (normal and
+stream), and a tool call (hermes parser) worked. The numbers are the same as in the k3s pod (see
+`docs/benchmarks.md`). After `docker stop`, only the desktop display (1,165 MiB) used the GPU. An
+earlier run used another model (Qwen3.5-4B), see "Earlier try" in `docs/benchmarks.md`.
 
 This step runs vLLM in Docker, outside Kubernetes, with the image that k3s uses later.
 
@@ -147,6 +149,13 @@ docker run --rm --gpus all --ipc=host -p 8000:8000 \
 
 The first start downloads the model (about 6 GiB). The second mount keeps the compile cache, so the next
 start is faster. Wait for the log line that says the server is ready.
+
+If the model is in the `vllm-cache` PVC of k3s already, do not download it again. Scale the k3s pod
+down (`kubectl scale deploy/vllm-qwen --replicas=0`, one GPU only) and mount the folders of the PVC
+(`/var/lib/rancher/k3s/storage/pvc-*_default_vllm-cache/hf` and `.../vllm`) in place of the two
+folders above. The compile cache of the pod holds absolute paths under `/cache/vllm`, so the first
+start in Docker prints warnings (`Cubin file saved by TritonBundler not found`). They are harmless.
+vLLM compiles those parts again.
 
 How to set `--gpu-memory-utilization`: vLLM refuses to start when the free VRAM is lower than
 the value times the total VRAM. The Windows desktop and other programs use VRAM, so the free VRAM
@@ -192,6 +201,8 @@ Copy these numbers into `docs/benchmarks.md` (section "VRAM") and into the table
 ### Stop
 
 Press `Ctrl-C`. Then run `nvidia-smi`. The GPU memory must be free (only the desktop display remains).
+If you started the container with `docker run -d --name vllm-standalone`, run
+`docker stop vllm-standalone && docker rm vllm-standalone` instead.
 
 ## Speech servers (STT and TTS)
 

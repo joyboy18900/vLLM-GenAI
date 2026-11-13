@@ -24,7 +24,7 @@ model first" in `docs/setup.md`). The standalone run of ticket 02 is not done.
 
 | Item | Value | Source |
 |---|---|---|
-| Desktop display, before vLLM | 799 MiB | `nvidia-smi` |
+| Desktop display, before vLLM | 799 MiB (k3s start), 1,169 MiB (standalone start, later the same day) | `nvidia-smi` |
 | Checkpoint size | 5.75 GiB | vLLM log: "Checkpoint size" |
 | Weights in VRAM | 5.79 GiB | vLLM log: "Model loading took" |
 | KV cache, first start (empty compile cache) | 2.26 GiB, 65,920 tokens, 8.05x concurrency for 8,192 tokens | vLLM log |
@@ -35,6 +35,11 @@ model first" in `docs/setup.md`). The standalone run of ticket 02 is not done.
 The first start has less KV cache because the compile step uses more memory: 6.55 GiB of non-torch
 memory and 0.78 GiB of peak activation, against 5.99 GiB and 0.35 GiB on the next start. Use the
 second row for planning. The KV cache is 3.5 times the 0.92 GiB of the earlier try below.
+
+The standalone run in Docker (ticket 02, same flags, same cache folder) gave the same numbers: weights
+5.79 GiB, KV cache 3.26 GiB, 94,976 tokens, 11.59x concurrency, 11,102 MiB in use at idle. It was
+ready in 61 s. The desktop display used 1,169 MiB at that start, 370 MiB more than at the first
+start, so keep `--gpu-memory-utilization` with some room.
 
 The download of the model (a one-time step) took 5 minutes 25 seconds. The first try inside the pod
 ran at about 2 MB/s and did not finish in the 10-minute startup window, so the pod was restarted by
