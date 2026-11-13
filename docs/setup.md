@@ -378,8 +378,11 @@ Status: written, untested. The audio settings are environment variables in
 
 ## Core monitoring
 
-Status: written, untested. Checked offline: `kubeconform` on the manifests, `promtool check config`
-on the Prometheus config, and `promtool check rules` on all 36 dashboard queries (syntax only).
+Status: ran on WSL2 on 2026-11-13. All 7 Prometheus targets were up (`prometheus`, `vllm`, `dcgm`,
+`node-exporter`, `kube-state-metrics`, and two `speech`). The 36 dashboard queries and the 4 alert
+rules use metric names that exist in Prometheus (checked by script). After 12 chat requests, the vLLM
+counters moved (tokens, TTFT, inter-token latency, E2E latency, prefix cache, spec decode).
+Grafana answered 401 without a login. Not checked: the panels in the browser.
 
 The stack runs in the `monitoring` namespace: Prometheus, Grafana, DCGM exporter, Node
 Exporter, and kube-state-metrics. The dashboard comes from code: `bench/gen_dash.py`.
@@ -418,14 +421,21 @@ kubectl apply -f k8s/monitoring/31-dashboard-serving.yaml -f k8s/monitoring/30-g
    panels for throughput, TTFT, and running requests must move.
 4. If the target `dcgm` is down or shows no GPU, the pod may not see the GPU without a GPU request.
    Add `privileged: true` under `securityContext` of the container in
-   `k8s/monitoring/20-dcgm-exporter.yaml`, apply the file, and write the change here.
+   `k8s/monitoring/20-dcgm-exporter.yaml`, apply the file, and write the change here. On WSL2 this
+   was not needed: `DCGM_FI_DEV_FB_USED`, GPU utilization, and temperature had values.
+   WSL2 only: the pod `node-exporter` stays in `CreateContainerError` with `path "/" is mounted on
+   "/" but it is not a shared or slave mount`, because `/` is private in WSL2. Run
+   `mount --make-rshared /` as root in WSL2, then delete the pod. The setting is lost at the next
+   boot of WSL2. Bare-metal Ubuntu has a shared `/` and does not need this.
 5. If a vLLM panel stays empty, open `http://<vllm pod>:8000/metrics` and compare the metric
    names with `bench/gen_dash.py`. The names come from the vLLM v0.28.0 source.
 
 ## Logs with Loki
 
-Status: written, untested. Checked offline: `kubeconform`, `loki -verify-config`, and
-`alloy fmt` (syntax only).
+Status: ran on WSL2 on 2026-11-13. Loki answered `ready`, and the queries `{app="vllm"}`,
+`{app="stt"}`, `{app="tts"}`, and `{app="open-webui"}` returned lines (checked with the Loki API, not
+in the Explore page of Grafana). Grafana lists the data sources Prometheus and Loki from the
+provisioning file.
 
 Loki stores logs on a PVC for 7 days. Grafana Alloy reads the logs of all pods through the
 Kubernetes API and sends them to Loki. Grafana gets Loki as a data source from the
@@ -448,8 +458,11 @@ kubectl -n monitoring rollout status deploy/loki deploy/alloy deploy/grafana
 
 ## Alerts with Alertmanager
 
-Status: written, untested. Checked offline: `kubeconform`, `promtool check config` (it also
-loads the rules), and `amtool check-config`.
+Status: ran on WSL2 on 2026-11-13. The check below passed: `TargetDown` for `kube-state-metrics`
+was firing after about 100 s, Alertmanager listed it as active, and both were empty about 20 s after
+the restore. A pod that Prometheus finds by pod discovery gives no alert when scaled to zero (tested
+with TTS: no alert in 180 s). When the same pod runs but does not answer on its port, `TargetDown`
+fires after about 80 s.
 
 Rules are in `k8s/monitoring/50-alert-rules.yaml`: any scrape target down, vLLM preemptions
 above zero, GPU temperature above 85 C, and KV cache usage above 90 percent. Alertmanager
