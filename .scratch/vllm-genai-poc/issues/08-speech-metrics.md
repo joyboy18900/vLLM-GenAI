@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-**Test status:** `/metrics` on both servers tested in Docker on a Mac. The Prometheus `speech` job and the dashboard speech row are written in ticket 07 files, untested.
+**Test status:** `/metrics` on both servers tested in Docker on a Mac. On WSL2 on 2026-11-13, Prometheus showed both `speech` targets up, and the dashboard has the row "Speech (STT and TTS)". The round trip is not checked yet (the smoke test of ticket 14 does it).
 
 - [x] STT and TTS expose request count and latency histograms on `/metrics`
-- [ ] Prometheus scrapes both; targets up
-- [ ] Dashboard has a speech row (request rate, p50/p99 latency for transcription and synthesis)
+- [x] Prometheus scrapes both; targets up
+- [x] Dashboard has a speech row (request rate, p50/p99 latency for transcription and synthesis)
 - [ ] A TTS to STT round trip shows in the panels

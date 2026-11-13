@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-**Test status:** written, untested. Offline checks only: kubeconform, `loki -verify-config`, `alloy fmt`.
+**Test status:** ran on WSL2 on 2026-11-13. The Loki API returned lines for `{app="vllm"}`, `{app="stt"}`, `{app="tts"}`, and `{app="open-webui"}`. Not ticked: the search in the Explore page of Grafana was not done.
 
-- [ ] Loki and a log collector deployed, images pinned, Loki data on a PersistentVolumeClaim with a retention limit
-- [ ] Loki added as a Grafana data source by provisioning
+- [x] Loki and a log collector deployed, images pinned, Loki data on a PersistentVolumeClaim with a retention limit
+- [x] Loki added as a Grafana data source by provisioning
 - [ ] A search in Grafana returns recent log lines from the `vllm` pod
-- [ ] The setup runbook has the deploy and check steps
+- [x] The setup runbook has the deploy and check steps
