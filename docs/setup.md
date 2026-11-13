@@ -595,11 +595,11 @@ Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, an
 
 ## Optimization levers
 
-Status: measured on WSL2 on 2026-11-13: `baseline`, `deployed`, `spec_ngram`, `spec_draft`, `compile`,
+Status: measured on WSL2 on 2026-11-13: `baseline`, `ngram_chunked`, `spec_ngram`, `spec_draft`, `compile`,
 and `awq`. The results are in `docs/benchmarks.md`. `sched`, `kv_fp8`, and `min_latency` use a GPU memory
 utilization of 0.92 and do not start on this PC: the free VRAM at start is 10.79 GiB, and 0.92 needs 11.03
 GiB. The model `Qwen/Qwen2.5-3B-Instruct-AWQ` and the draft model `Qwen/Qwen2.5-0.5B-Instruct` must be in the
-cache first (see "Download the model first", with the model names changed). The final flags are not chosen.
+cache first (see "Download the model first", with the model names changed). The final flags are `baseline` (see `docs/benchmarks.md`).
 
 Each configuration is a full argument list for the vLLM container. `baseline` is the plain engine.
 The others change one thing, or a few things together (`min_latency`). `deployed` is the argument
@@ -616,7 +616,7 @@ bench/run.sh spec_ngram && python3 bench/quality_check.py --label spec_ngram
 ```
 
 Configurations: `baseline`, `awq`, `sched`, `kv_fp8`, `spec_ngram`, `spec_draft`, `compile`,
-`deployed`, and `min_latency`. Read the VRAM of each one from `nvidia-smi` and the vLLM log. A
+`ngram_chunked`, `deployed`, and `min_latency`. Read the VRAM of each one from `nvidia-smi` and the vLLM log. A
 configuration is lossless when the quality check gives the same answers as the baseline. The first
 start of `compile` and `min_latency` builds the compile cache and takes several minutes. If a
 configuration does not start, write the error in `docs/benchmarks.md` and go on to the next one.

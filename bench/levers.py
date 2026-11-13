@@ -10,7 +10,7 @@ The others add one lever, or a few levers together, so that their effect can be 
     bench/run.sh spec_ngram                          # then measure
     python3 bench/quality_check.py --label spec_ngram
 
-`deployed` is the argument list of k8s/vllm-deployment.yaml. Keep the two in step.
+`deployed` is the argument list of k8s/vllm-deployment.yaml (the same as `baseline`). Keep the two in step.
 Flag names were checked against vllm/engine/arg_utils.py at v0.28.0.
 """
 import argparse
@@ -79,8 +79,8 @@ CONFIGS = {
         "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
         *COMPILE,
     ],
-    # the arguments of k8s/vllm-deployment.yaml
-    "deployed": [
+    # the earlier Deployment: n-gram, chunked prefill, utilization 0.80
+    "ngram_chunked": [
         MODEL, "--dtype=float16", "--gpu-memory-utilization=0.80",
         "--max-model-len=8192", "--max-num-seqs=16", "--enable-prefix-caching",
         "--enable-chunked-prefill", "--max-num-batched-tokens=2048",
@@ -93,6 +93,9 @@ CONFIGS = {
         "--enable-prefix-caching", *COMPILE, NGRAM,
     ],
 }
+
+# The final choice: the Deployment uses the arguments of the baseline.
+CONFIGS["deployed"] = CONFIGS["baseline"]
 
 
 def build_args(name):

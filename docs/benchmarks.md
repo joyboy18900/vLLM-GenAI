@@ -12,13 +12,13 @@ is "WSL2". They do not replace the runs on Ubuntu or EC2.
 | GPU and driver version | RTX 4070 SUPER 12 GB. Windows driver 616.64, driver seen in WSL2 615.65.07, CUDA 13.4 |
 | vLLM version | v0.28.0 (`vllm/vllm-openai:v0.28.0`) |
 | Model and dtype | `Qwen/Qwen2.5-3B-Instruct`, float16 |
-| Flags | one argument list per configuration of `bench/levers.py`. The configuration `deployed` equals `k8s/vllm-deployment.yaml`. The VRAM section below uses `deployed` |
+| Flags | one argument list per configuration of `bench/levers.py`. The configuration `deployed` equals `k8s/vllm-deployment.yaml` (now the same as `baseline`). The VRAM section below was measured with `ngram_chunked`, the earlier Deployment |
 
 ## VRAM (ticket 02)
 
 ### Qwen2.5-3B-Instruct, fp16 (WSL2, k3s pod)
 
-Measured on 2026-11-13 in the k3s pod, with the flags of `k8s/vllm-deployment.yaml` (utilization
+Measured on 2026-11-13 in the k3s pod, with the flags of the earlier Deployment (`ngram_chunked`, utilization
 0.80, max-model-len 8192, max-num-seqs 16). The model was in the cache already (see "Download the
 model first" in `docs/setup.md`).
 
@@ -102,7 +102,7 @@ uses random tokens, so use it for the engine only.
 | Configuration | Util | Weights (GiB) | KV cache (GiB, tokens, concurrency) | VRAM idle (MiB) | Ready (s) | chat out tok/s, conc 1 / 8 / 16 | chat TPOT p50 (ms), conc 1 | Same answers as baseline | Quality pass |
 |---|---|---|---|---|---|---|---|---|---|
 | `baseline` | 0.85 | 5.79 | 2.97, 86,560, 10.57x | 10818 | 62 | 70.7 / 539.1 / 1047.2 | 14.2 | 14/14 | 11/14 |
-| `deployed` | 0.80 | 5.79 | 3.26, 94,976, 11.59x | 11198 | 52 | 65.0 / 464.8 / 851.9 | 15.6 | 14/14 | 11/14 |
+| `ngram_chunked` | 0.80 | 5.79 | 3.26, 94,976, 11.59x | 11198 | 52 | 65.0 / 464.8 / 851.9 | 15.6 | 14/14 | 11/14 |
 | `spec_ngram` | 0.85 | 5.79 | 3.86, 112,448, 13.73x | 11769 | 51 | 64.5 / 449.6 / 826.2 | 15.8 | 14/14 | 11/14 |
 | `spec_draft` | 0.85 | 6.73 | 1.88, 40,992, 5.00x | 10560 | 71 | 80.7 / 548.6 / 987.6 | 11.7 | 14/14 | 11/14 |
 | `compile` | 0.85 | 5.79 | 3.97, 115,632, 14.12x | 11607 | 51 | 68.7 / 529.3 / 1028.6 | 14.5 | 14/14 | 11/14 |
@@ -132,7 +132,7 @@ to spare.
 All values are from the tables on this page. Out tok/s is the output throughput.
 
 - **N-gram decoding (`spec_ngram`) helps `random` and does not help `chat`.** TPOT p50 at concurrency 1: `random` 14.1 ms to 4.8 ms, `chat` 14.2 ms to 15.8 ms. Out tok/s of `chat`: -9% at concurrency 1, -17% at 8, -21% at 16. The answers are the same as the baseline (14 of 14). The vLLM log of every n-gram start says that async scheduling is turned off and that `max_num_scheduled_tokens` is set to 2048. This can be part of the cost. It is not tested alone.
-- **`deployed` (the n-gram flags of the Deployment) behaves like `spec_ngram`.** Out tok/s of `chat` at concurrency 16: 851.9, against 1047.2 for the baseline.
+- **`ngram_chunked` (the n-gram flags of the earlier Deployment, 0.80) behaves like `spec_ngram`.** Out tok/s of `chat` at concurrency 16: 851.9, against 1047.2 for the baseline.
 - **A draft model (`spec_draft`) is faster at low concurrency and slower at high concurrency.** Out tok/s of `chat`: +14% at concurrency 1, -6% at 16. It adds 0.94 GiB of weights and leaves 1.88 GiB of KV cache (5.00x concurrency). The answers are the same as the baseline.
 - **`compile` equals the baseline.** Out tok/s of `chat` at concurrency 16: 1028.6 against 1047.2. vLLM v0.28.0 uses the same compile mode by default.
 - **AWQ is the largest change.** Weights 1.95 GiB (fp16: 5.79 GiB). Out tok/s of `chat`: +134% at concurrency 1, +124% at 16. TPOT p50 of `chat` at concurrency 1: 6.0 ms against 14.2 ms. The KV cache is 6.89 GiB (24.50x concurrency). The quantization changes the answers: 4 of 14 answers differ from the baseline.
@@ -142,7 +142,7 @@ All values are from the tables on this page. Out tok/s is the output throughput.
 
 ### Tables of each configuration
 
-#### `deployed`
+#### `ngram_chunked`
 
 | workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
 |---|---|---|---|---|---|---|---|---|---|
@@ -207,9 +207,17 @@ All values are from the tables on this page. Out tok/s is the output throughput.
 | random | 8 | 189.5 | 287.4 | 7.1 | 8.8 | 930.0 | 7.3 | 96 | 0 |
 | random | 16 | 66.5 | 519.4 | 7.2 | 12.4 | 1666.9 | 13.0 | 160 | 0 |
 
-Preemptions: `baseline` 0, `deployed` 0, `spec_ngram` 0, `spec_draft` 0, `compile` 0, `awq` 0. No request failed in any run.
+Preemptions: `baseline` 0, `ngram_chunked` 0, `spec_ngram` 0, `spec_draft` 0, `compile` 0, `awq` 0. No request failed in any run.
 
-Final choice: not made yet. Write the chosen flags and the reasons here.
+Final choice: `baseline` (fp16, utilization 0.85, max-model-len 8192, max-num-seqs 16, prefix caching), with `VLLM_USE_V2_MODEL_RUNNER=0` on WSL2. The Deployment and the configuration `deployed` use it.
+
+Reasons:
+- It is the fastest lossless configuration for the chat workload. Out tok/s of `chat` at concurrency 16: 1047.2, against 851.9 for `ngram_chunked` (the earlier Deployment).
+- N-gram decoding helps `random` and costs 9% to 21% of `chat` throughput. The product is a chat.
+- Its answers are the reference for the quality check (14 of 14 for every lossless configuration).
+- Utilization 0.85 starts on this PC. 0.92 does not.
+
+AWQ is the largest gain (+124% out tok/s of `chat` at concurrency 16), but 4 of 14 answers differ. It stays an option for multi-instance (see `CLAUDE.md`). `sched`, `kv_fp8`, and `min_latency` are not measured (they need utilization 0.92).
 
 ## Voice (ticket 06)
 
