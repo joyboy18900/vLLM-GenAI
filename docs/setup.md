@@ -567,8 +567,13 @@ On the Mac, add one line to `/etc/hosts` (needs `sudo`). Use the address of the 
 
 ## Benchmark harness
 
-Status: the Python scripts ran against a fake server and fake data on a Mac (logic only).
-`bench/run.sh` is written, untested. It needs the real cluster.
+Status: ran on WSL2 on 2026-11-13 for 6 configurations (all 8 workload and concurrency runs each, no
+failed request). The run found a bug: the `custom` dataset needs pandas, which the vLLM image does not
+have, so the `chat` workload now uses a `sharegpt` dataset that `bench/run.sh` makes from
+`bench/prompts`. On WSL2 set `VLLM_USE_V2_MODEL_RUNNER=0` for configurations without speculative
+decoding (`kubectl set env deploy/vllm-qwen VLLM_USE_V2_MODEL_RUNNER=0`). Without it, the engine stops
+with `RuntimeError: UVA is not available`. Remove it after the run. A long run needs an open session to
+the PC (see "Remote access"), because WSL2 stops when no session is open.
 
 `bench/run.sh <label>` runs `vllm bench serve` inside the vLLM pod for three workloads at
 concurrency 1, 8, and 16. It uses seed 0, 3 warmup requests, 24, 96, and 160 prompts for
@@ -590,8 +595,11 @@ Paste the table in `docs/benchmarks.md` with the vLLM version, driver, model, an
 
 ## Optimization levers
 
-Status: `bench/levers.py` builds the argument list of every configuration (checked offline). The
-patch and the measurements are not run. Nothing is measured.
+Status: measured on WSL2 on 2026-11-13: `baseline`, `deployed`, `spec_ngram`, `spec_draft`, `compile`,
+and `awq`. The results are in `docs/benchmarks.md`. `sched`, `kv_fp8`, and `min_latency` use a GPU memory
+utilization of 0.92 and do not start on this PC: the free VRAM at start is 10.79 GiB, and 0.92 needs 11.03
+GiB. The model `Qwen/Qwen2.5-3B-Instruct-AWQ` and the draft model `Qwen/Qwen2.5-0.5B-Instruct` must be in the
+cache first (see "Download the model first", with the model names changed). The final flags are not chosen.
 
 Each configuration is a full argument list for the vLLM container. `baseline` is the plain engine.
 The others change one thing, or a few things together (`min_latency`). `deployed` is the argument

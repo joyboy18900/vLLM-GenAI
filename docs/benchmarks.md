@@ -62,20 +62,151 @@ The checks of that run passed: `/v1/models`, a chat completion (normal and strea
 
 ## Baseline (ticket 12)
 
-Not measured yet. Run these commands, then paste the table here:
+Measured on 2026-11-13 on WSL2 (k3s pod, `vllm bench serve` inside the pod, seed 0, 3 warmup requests,
+`--ignore-eos`). The monitoring stack ran at the same time, as in normal use. The configuration is
+`baseline` of `bench/levers.py` (fp16, utilization 0.85, max-model-len 8192, max-num-seqs 16, prefix
+caching, no speculative decoding).
 
-```bash
-bench/run.sh baseline
-python3 bench/summarize.py baseline
-python3 bench/quality_check.py --label baseline
-```
+The engine needs `VLLM_USE_V2_MODEL_RUNNER=0` on WSL2 for every configuration without speculative
+decoding. Without it, vLLM v0.28.0 starts the model runner V2 and stops with
+`RuntimeError: UVA is not available`. The variable was set on the Deployment during the runs and
+removed after them. The configuration with n-gram decoding chooses the runner V1 by itself.
+
+Each table row is `vllm bench serve` output. TTFT and TPOT are in milliseconds. Workload `random` is
+random tokens (input 512, output 128), `chat` is the 28 prompts of `bench/prompts` (output 128), and
+`prefix` is a shared prefix of 1024 tokens (input 256, output 128).
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 22.0 | 23.2 | 14.2 | 14.3 | 70.7 | 0.6 | 24 | 0 |
+| chat | 8 | 46.2 | 49.9 | 14.5 | 14.8 | 539.1 | 4.2 | 96 | 0 |
+| chat | 16 | 52.1 | 81.5 | 15.0 | 15.2 | 1047.2 | 8.2 | 160 | 0 |
+| prefix | 1 | 36.7 | 47.4 | 14.1 | 14.7 | 70.1 | 0.5 | 24 | 0 |
+| prefix | 8 | 148.5 | 213.8 | 15.3 | 16.3 | 487.3 | 3.8 | 96 | 0 |
+| random | 1 | 57.1 | 60.1 | 14.1 | 14.7 | 69.0 | 0.5 | 24 | 0 |
+| random | 8 | 214.1 | 389.4 | 15.4 | 17.2 | 471.3 | 3.7 | 96 | 0 |
+| random | 16 | 423.3 | 718.7 | 18.0 | 20.7 | 760.8 | 5.9 | 160 | 0 |
+
+Start of the baseline: weights 5.79 GiB, KV cache 2.97 GiB (86,560 tokens, 10.57x concurrency for 8,192 tokens), 10818 MiB of VRAM in use at idle, ready in 62 s. Preemptions during the run: 0.
+
+Quality check (temperature 0, 256 tokens): English 8/8, Thai 3/6 prompts contain the expected word. The Thai result is a property of the model. It is the reference for the other configurations.
 
 ## Optimization levers (ticket 13)
 
-Not measured yet. One section per lever: latency, throughput, VRAM, and the quality result.
-The configurations are: `baseline`, `awq`, `sched`, `kv_fp8`, `spec_ngram`, `spec_draft`, `compile`,
-`deployed`, and `min_latency`. Run them with `bench/levers.py` (see `docs/setup.md`, section
-"Optimization levers").
+Each configuration is a full argument list in `bench/levers.py`. The runs used the same harness and
+the same seed as the baseline. Workload `chat` is the closest to the product. Workload `random`
+uses random tokens, so use it for the engine only.
+
+### Overview
+
+| Configuration | Util | Weights (GiB) | KV cache (GiB, tokens, concurrency) | VRAM idle (MiB) | Ready (s) | chat out tok/s, conc 1 / 8 / 16 | chat TPOT p50 (ms), conc 1 | Same answers as baseline | Quality pass |
+|---|---|---|---|---|---|---|---|---|---|
+| `baseline` | 0.85 | 5.79 | 2.97, 86,560, 10.57x | 10818 | 62 | 70.7 / 539.1 / 1047.2 | 14.2 | 14/14 | 11/14 |
+| `deployed` | 0.80 | 5.79 | 3.26, 94,976, 11.59x | 11198 | 52 | 65.0 / 464.8 / 851.9 | 15.6 | 14/14 | 11/14 |
+| `spec_ngram` | 0.85 | 5.79 | 3.86, 112,448, 13.73x | 11769 | 51 | 64.5 / 449.6 / 826.2 | 15.8 | 14/14 | 11/14 |
+| `spec_draft` | 0.85 | 6.73 | 1.88, 40,992, 5.00x | 10560 | 71 | 80.7 / 548.6 / 987.6 | 11.7 | 14/14 | 11/14 |
+| `compile` | 0.85 | 5.79 | 3.97, 115,632, 14.12x | 11607 | 51 | 68.7 / 529.3 / 1028.6 | 14.5 | 14/14 | 11/14 |
+| `awq` | 0.85 | 1.95 | 6.89, 200,736, 24.50x | 10704 | 71 | 165.2 / 1256.2 / 2345.5 | 6.0 | 10/14 | 12/14 |
+
+The KV cache of one configuration changes with the start. The first start of a new argument list builds
+the compile cache and leaves less KV cache (see "VRAM" above), and the utilization differs. Compare the
+speed columns, and read the KV cache column only as the size that each start had.
+
+### Configurations that did not start
+
+| Configuration | Utilization | Result |
+|---|---|---|
+| `sched` | 0.92 | Stopped at start: `Free memory on device cuda:0 (10.79/11.99 GiB) on startup is less than desired GPU memory utilization (0.92, 11.03 GiB). Decrease GPU memory utilization or reduce GPU memory used by other processes.` |
+| `kv_fp8` | 0.92 | Stopped at start. The same error as `sched` (the line was read by hand from the pod log, because the driver script did not save it). |
+| `min_latency` | 0.92 | Stopped at start: `Free memory on device cuda:0 (10.79/11.99 GiB) on startup is less than desired GPU memory utilization (0.92, 11.03 GiB). Decrease GPU memory utilization or reduce GPU memory used by other processes.` |
+
+vLLM refuses to start when the free VRAM is less than the utilization times the total VRAM. At every
+start the free VRAM was 10.79 GiB of 11.99 GiB, because the Windows desktop uses part of the GPU. A
+utilization of 0.92 needs 11.03 GiB. These three configurations are not measured. A utilization of 0.89
+needs 10.67 GiB. It fits by calculation (not tested), with 0.12 GiB to spare. The desktop used 799 to
+1,169 MiB in this run, so the free VRAM at start can change.
+
+### What the numbers show
+
+All values are from the tables on this page. Out tok/s is the output throughput.
+
+- **N-gram decoding (`spec_ngram`) helps `random` and does not help `chat`.** TPOT p50 at concurrency 1: `random` 14.1 ms to 4.8 ms, `chat` 14.2 ms to 15.8 ms. Out tok/s of `chat`: -9% at concurrency 1, -17% at 8, -21% at 16. The answers are the same as the baseline (14 of 14).
+- **`deployed` (the n-gram flags of the Deployment) behaves like `spec_ngram`.** Out tok/s of `chat` at concurrency 16: 851.9, against 1047.2 for the baseline.
+- **A draft model (`spec_draft`) is faster at low concurrency and slower at high concurrency.** Out tok/s of `chat`: +14% at concurrency 1, -6% at 16. It adds 0.94 GiB of weights and leaves 1.88 GiB of KV cache (5.00x concurrency). The answers are the same as the baseline.
+- **`compile` equals the baseline.** Out tok/s of `chat` at concurrency 16: 1028.6 against 1047.2. vLLM v0.28.0 uses the same compile mode by default.
+- **AWQ is the largest change.** Weights 1.95 GiB (fp16: 5.79 GiB). Out tok/s of `chat`: +134% at concurrency 1, +124% at 16. TPOT p50 of `chat` at concurrency 1: 6.0 ms against 14.2 ms. The KV cache is 6.89 GiB (24.50x concurrency). The quantization changes the answers: 4 of 14 answers differ from the baseline.
+- **No request failed and no preemption happened** in any run. At concurrency 16 with `--max-num-seqs 16`, the engine is at its limit, so the TTFT p99 of `random` includes queue time.
+- **Prefix caching:** it is on in every configuration. No configuration turns it off, so its own effect is not measured.
+- **Thai quality:** every configuration gives 3 or 4 of 6 Thai prompts. The check is a word test. It is a guard for lossless levers, not a measure of Thai quality.
+
+### Tables of each configuration
+
+#### `deployed`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 21.1 | 23.3 | 15.6 | 16.8 | 65.0 | 0.5 | 24 | 0 |
+| chat | 8 | 35.8 | 47.3 | 17.0 | 17.8 | 464.8 | 3.6 | 96 | 0 |
+| chat | 16 | 39.0 | 83.0 | 18.4 | 19.9 | 851.9 | 6.7 | 160 | 0 |
+| prefix | 1 | 36.9 | 37.6 | 4.8 | 15.9 | 142.7 | 1.1 | 24 | 0 |
+| prefix | 8 | 64.9 | 215.0 | 6.8 | 24.7 | 838.6 | 6.6 | 96 | 0 |
+| random | 1 | 56.7 | 57.9 | 4.9 | 15.9 | 142.0 | 1.1 | 24 | 0 |
+| random | 8 | 80.3 | 122.8 | 7.5 | 25.9 | 756.6 | 5.9 | 96 | 0 |
+| random | 16 | 86.3 | 713.3 | 9.5 | 34.2 | 1099.2 | 8.6 | 160 | 0 |
+
+#### `spec_ngram`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 21.4 | 23.3 | 15.8 | 16.5 | 64.5 | 0.5 | 24 | 0 |
+| chat | 8 | 36.9 | 49.9 | 17.5 | 18.6 | 449.6 | 3.5 | 96 | 0 |
+| chat | 16 | 39.8 | 81.0 | 18.8 | 19.6 | 826.2 | 6.5 | 160 | 0 |
+| prefix | 1 | 37.3 | 41.6 | 4.9 | 16.3 | 139.4 | 1.1 | 24 | 0 |
+| prefix | 8 | 64.9 | 262.2 | 7.3 | 24.5 | 765.7 | 6.0 | 96 | 0 |
+| random | 1 | 56.3 | 58.0 | 4.8 | 16.2 | 142.0 | 1.1 | 24 | 0 |
+| random | 8 | 80.1 | 123.4 | 6.6 | 25.5 | 799.3 | 6.2 | 96 | 0 |
+| random | 16 | 56.3 | 170.3 | 8.2 | 34.9 | 1369.6 | 10.7 | 160 | 0 |
+
+#### `spec_draft`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 62.8 | 115.5 | 11.7 | 14.7 | 80.7 | 0.6 | 24 | 0 |
+| chat | 8 | 98.9 | 150.1 | 13.4 | 16.2 | 548.6 | 4.3 | 96 | 0 |
+| chat | 16 | 106.1 | 148.6 | 14.3 | 18.1 | 987.6 | 7.7 | 160 | 0 |
+| prefix | 1 | 84.4 | 85.5 | 8.2 | 11.9 | 110.6 | 0.9 | 24 | 0 |
+| prefix | 8 | 155.3 | 303.5 | 10.9 | 24.2 | 594.1 | 4.6 | 96 | 0 |
+| random | 1 | 103.6 | 105.5 | 8.2 | 17.4 | 97.5 | 0.8 | 24 | 0 |
+| random | 8 | 155.1 | 334.6 | 11.4 | 23.8 | 558.8 | 4.4 | 96 | 0 |
+| random | 16 | 203.8 | 983.6 | 14.6 | 40.5 | 820.2 | 6.4 | 160 | 0 |
+
+#### `compile`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 22.6 | 23.6 | 14.5 | 14.6 | 68.7 | 0.5 | 24 | 0 |
+| chat | 8 | 47.3 | 50.6 | 14.8 | 14.9 | 529.3 | 4.1 | 96 | 0 |
+| chat | 16 | 49.5 | 81.0 | 15.2 | 15.3 | 1028.6 | 8.0 | 160 | 0 |
+| prefix | 1 | 37.6 | 47.9 | 14.5 | 14.8 | 68.0 | 0.5 | 24 | 0 |
+| prefix | 8 | 169.2 | 215.8 | 15.6 | 16.5 | 476.3 | 3.7 | 96 | 0 |
+| random | 1 | 57.1 | 61.6 | 14.4 | 14.4 | 68.5 | 0.5 | 24 | 0 |
+| random | 8 | 218.3 | 388.8 | 15.4 | 17.6 | 461.4 | 3.6 | 96 | 0 |
+| random | 16 | 79.8 | 613.7 | 15.8 | 20.7 | 879.0 | 6.9 | 160 | 0 |
+
+#### `awq`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 13.2 | 20.0 | 6.0 | 6.0 | 165.2 | 1.3 | 24 | 0 |
+| chat | 8 | 26.9 | 36.3 | 6.2 | 6.3 | 1256.2 | 9.8 | 96 | 0 |
+| chat | 16 | 42.1 | 53.5 | 6.5 | 6.7 | 2345.5 | 18.3 | 160 | 0 |
+| prefix | 1 | 36.4 | 37.9 | 5.9 | 6.0 | 161.5 | 1.3 | 24 | 0 |
+| prefix | 8 | 196.6 | 211.9 | 6.6 | 7.8 | 992.0 | 7.7 | 96 | 0 |
+| random | 1 | 56.1 | 56.8 | 5.9 | 6.0 | 158.6 | 1.2 | 24 | 0 |
+| random | 8 | 189.5 | 287.4 | 7.1 | 8.8 | 930.0 | 7.3 | 96 | 0 |
+| random | 16 | 66.5 | 519.4 | 7.2 | 12.4 | 1666.9 | 13.0 | 160 | 0 |
+
+Preemptions: `baseline` 0, `deployed` 0, `spec_ngram` 0, `spec_draft` 0, `compile` 0, `awq` 0. No request failed in any run.
 
 Final choice: not made yet. Write the chosen flags and the reasons here.
 
