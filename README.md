@@ -158,7 +158,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | Part | Status |
 |---|---|
 | GPU node: NVIDIA Container Toolkit, Docker, k3s, device plugin, GPU test pod | Ran on WSL2: the node reports `nvidia.com/gpu: 1` and a pod runs `nvidia-smi` |
-| vLLM standalone (in Docker) | Ran on WSL2 with an earlier model (Qwen3.5-4B): chat, stream, and tool calls worked. Not run yet with Qwen2.5-3B-Instruct |
+| vLLM standalone (in Docker) | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and tool calls worked, and the VRAM numbers equal those of the k3s pod |
 | STT and TTS servers, `/metrics` routes | Tested in Docker on a Mac. Ran on k3s in WSL2: the round trip returned "Hello World!" |
 | Open WebUI | Pod ready on k3s in WSL2, `/health` answers. Chat in the browser is not tested |
 | vLLM on k3s | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and a tool call through the Service, and a restart without a new download. VRAM and KV cache are in `docs/benchmarks.md` |

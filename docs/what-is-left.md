@@ -87,8 +87,9 @@ The owner keeps these facts outside the repository. Ask the owner.
     in quotes is expanded by another shell on the way.
   - `kubectl run -i` reads the stdin of the script. Add `< /dev/null` to it.
   - The shell of the Mac (zsh) does not split a variable that holds a command. Use a function.
-  - `--gpu-memory-utilization` must stay below the free VRAM at the start. The Windows desktop uses
-    about 1 GiB of the 12 GiB.
+  - `--gpu-memory-utilization` must stay below the free VRAM at the start. On this PC, vLLM sees
+    10.79 GiB free of 11.99 GiB, so 0.92 does not start. The Windows desktop uses about 0.8 to 1.2 GiB
+    of the 12 GiB, and that does not change the free VRAM that vLLM sees.
   - The WSL2 VM stops when no session is open, and k3s stops with it. Every pod restarts at the next
     connection. For a long run, keep a session open from the Mac:
     `ssh ... 'wsl -d Ubuntu-24.04 -- sleep infinity'` (in the background).

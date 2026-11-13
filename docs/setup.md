@@ -4,8 +4,8 @@ This runbook sets up the whole system on one machine, in order. Each section has
 a check command with the expected result.
 
 **Test status:** partly tested. Each section starts with its own status. The GPU node, vLLM
-standalone, the speech pods, and the Open WebUI pod ran on the local PC in WSL2 (not on bare-metal
-Ubuntu or EC2). Parts that ran on a Mac are named in their section (the STT and TTS servers, the
+standalone, vLLM on k3s, the speech pods, the Open WebUI pod, the monitoring, logs, and alerts, and
+the benchmark of 6 configurations ran on the local PC in WSL2 (not on bare-metal Ubuntu or EC2). Parts that ran on a Mac are named in their section (the STT and TTS servers, the
 metrics routes, the certificate commands, and the scripts that run on the Mac). Everything else is
 written and not tested. After the full run on Ubuntu or EC2, replace this paragraph with the
 result and fill the PC spec table in the first section.
@@ -158,8 +158,8 @@ start in Docker prints warnings (`Cubin file saved by TritonBundler not found`).
 vLLM compiles those parts again.
 
 How to set `--gpu-memory-utilization`: vLLM refuses to start when the free VRAM is lower than
-the value times the total VRAM. The Windows desktop and other programs use VRAM, so the free VRAM
-changes. If you see `Free memory on device ... is less than desired GPU memory utilization`, lower the
+the value times the total VRAM. On the WSL2 PC, vLLM saw 10.79 GiB free of 11.99 GiB at every start
+(0.85 and 0.80 start, 0.92 does not), while the Windows desktop used 799 to 1,169 MiB. If you see `Free memory on device ... is less than desired GPU memory utilization`, lower the
 value by 0.01 (this is about 0.12 GiB less KV cache). If you see `No available memory for the cache
 blocks`, there is too little VRAM left for the KV cache. Raise the value, or lower `--max-num-seqs`.
 
@@ -682,7 +682,8 @@ Open WebUI. Do that only after the choice.
 ## Rehearsal on WSL2 (before the real test)
 
 Status: partly tested on WSL2 (2026-11-08). The section "PC as a GPU node" ran on WSL2 and passed
-(see "Observed on WSL2" below). The other sections are not run yet. WSL2 is not bare-metal Linux,
+(see "Observed on WSL2" below). The sections after it are run later, and each has its own status
+(2026-11-13: vLLM, monitoring, and the benchmark ran). WSL2 is not bare-metal Linux,
 so write every result of this run as "tested on WSL2". It does not replace the test on Ubuntu or
 on EC2. The test on Ubuntu or EC2 stays required for the parts that differ.
 

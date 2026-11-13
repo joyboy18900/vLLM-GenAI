@@ -12,7 +12,7 @@ is "WSL2". They do not replace the runs on Ubuntu or EC2.
 | GPU and driver version | RTX 4070 SUPER 12 GB. Windows driver 616.64, driver seen in WSL2 615.65.07, CUDA 13.4 |
 | vLLM version | v0.28.0 (`vllm/vllm-openai:v0.28.0`) |
 | Model and dtype | `Qwen/Qwen2.5-3B-Instruct`, float16 |
-| Flags | the arguments of `k8s/vllm-deployment.yaml` (configuration `deployed` in `bench/levers.py`) |
+| Flags | one argument list per configuration of `bench/levers.py`. The configuration `deployed` equals `k8s/vllm-deployment.yaml`. The VRAM section below uses `deployed` |
 
 ## VRAM (ticket 02)
 
@@ -20,7 +20,7 @@ is "WSL2". They do not replace the runs on Ubuntu or EC2.
 
 Measured on 2026-11-13 in the k3s pod, with the flags of `k8s/vllm-deployment.yaml` (utilization
 0.80, max-model-len 8192, max-num-seqs 16). The model was in the cache already (see "Download the
-model first" in `docs/setup.md`). The standalone run of ticket 02 is not done.
+model first" in `docs/setup.md`).
 
 | Item | Value | Source |
 |---|---|---|
@@ -39,7 +39,7 @@ second row for planning. The KV cache is 3.5 times the 0.92 GiB of the earlier t
 The standalone run in Docker (ticket 02, same flags, same cache folder) gave the same numbers: weights
 5.79 GiB, KV cache 3.26 GiB, 94,976 tokens, 11.59x concurrency, 11,102 MiB in use at idle. It was
 ready in 61 s. The desktop display used 1,169 MiB at that start, 370 MiB more than at the first
-start, so keep `--gpu-memory-utilization` with some room.
+start. vLLM still saw 10.79 GiB of free VRAM in both starts.
 
 The download of the model (a one-time step) took 5 minutes 25 seconds. The first try inside the pod
 ran at about 2 MB/s and did not finish in the 10-minute startup window, so the pod was restarted by
@@ -121,16 +121,17 @@ speed columns, and read the KV cache column only as the size that each start had
 | `min_latency` | 0.92 | Stopped at start: `Free memory on device cuda:0 (10.79/11.99 GiB) on startup is less than desired GPU memory utilization (0.92, 11.03 GiB). Decrease GPU memory utilization or reduce GPU memory used by other processes.` |
 
 vLLM refuses to start when the free VRAM is less than the utilization times the total VRAM. At every
-start the free VRAM was 10.79 GiB of 11.99 GiB, because the Windows desktop uses part of the GPU. A
-utilization of 0.92 needs 11.03 GiB. These three configurations are not measured. A utilization of 0.89
-needs 10.67 GiB. It fits by calculation (not tested), with 0.12 GiB to spare. The desktop used 799 to
-1,169 MiB in this run, so the free VRAM at start can change.
+start the free VRAM was 10.79 GiB of 11.99 GiB (8 starts with a log, and the three that stopped). This
+was the same when the desktop used 799 MiB and when it used 1,169 MiB, so the desktop is not the whole
+reason. The cause is not found. A utilization of 0.92 needs 11.03 GiB. These three configurations are
+not measured. A utilization of 0.89 needs 10.67 GiB. It fits by calculation (not tested), with 0.12 GiB
+to spare.
 
 ### What the numbers show
 
 All values are from the tables on this page. Out tok/s is the output throughput.
 
-- **N-gram decoding (`spec_ngram`) helps `random` and does not help `chat`.** TPOT p50 at concurrency 1: `random` 14.1 ms to 4.8 ms, `chat` 14.2 ms to 15.8 ms. Out tok/s of `chat`: -9% at concurrency 1, -17% at 8, -21% at 16. The answers are the same as the baseline (14 of 14).
+- **N-gram decoding (`spec_ngram`) helps `random` and does not help `chat`.** TPOT p50 at concurrency 1: `random` 14.1 ms to 4.8 ms, `chat` 14.2 ms to 15.8 ms. Out tok/s of `chat`: -9% at concurrency 1, -17% at 8, -21% at 16. The answers are the same as the baseline (14 of 14). The vLLM log of every n-gram start says that async scheduling is turned off and that `max_num_scheduled_tokens` is set to 2048. This can be part of the cost. It is not tested alone.
 - **`deployed` (the n-gram flags of the Deployment) behaves like `spec_ngram`.** Out tok/s of `chat` at concurrency 16: 851.9, against 1047.2 for the baseline.
 - **A draft model (`spec_draft`) is faster at low concurrency and slower at high concurrency.** Out tok/s of `chat`: +14% at concurrency 1, -6% at 16. It adds 0.94 GiB of weights and leaves 1.88 GiB of KV cache (5.00x concurrency). The answers are the same as the baseline.
 - **`compile` equals the baseline.** Out tok/s of `chat` at concurrency 16: 1028.6 against 1047.2. vLLM v0.28.0 uses the same compile mode by default.
