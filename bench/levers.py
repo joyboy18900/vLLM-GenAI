@@ -55,6 +55,18 @@ CONFIGS = {
         "--max-model-len=4096", "--max-num-seqs=8", "--max-num-batched-tokens=4096",
         "--enable-prefix-caching",
     ],
+    # the same as `sched` at utilization 0.85, because 0.92 does not start on the WSL2 PC
+    "sched_085": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.85",
+        "--max-model-len=4096", "--max-num-seqs=8", "--max-num-batched-tokens=4096",
+        "--enable-prefix-caching",
+    ],
+    # the same as `kv_fp8` at utilization 0.85
+    "kv_fp8_085": [
+        MODEL, "--dtype=float16", "--gpu-memory-utilization=0.85",
+        "--max-model-len=4096", "--max-num-seqs=8", "--max-num-batched-tokens=4096",
+        "--enable-prefix-caching", "--kv-cache-dtype=fp8",
+    ],
     # fp8 KV cache
     "kv_fp8": [
         MODEL, "--dtype=float16", "--gpu-memory-utilization=0.92",

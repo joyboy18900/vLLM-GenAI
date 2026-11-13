@@ -23,6 +23,14 @@ On the PC, in k3s, at the time of the stop:
   one file that is not tracked: `docs/diagram-prompt.md`.
 - The SSH server and the firewall rule for it are still enabled on the PC.
 
+## Next step when the PC is on again
+
+Run `sched_085` and `kv_fp8_085` (they are in `bench/levers.py`). `kv_fp8` is the one to look at: the
+source project could not run it on a T4, and the RTX 4070 SUPER (Ada) supports it. Each takes about 15
+minutes (`WORKLOADS="random chat prefix" bench/run.sh <label>`, then `bench/quality_check.py`). Then put the
+tables in `docs/benchmarks.md`, tick the two boxes of ticket 13, and set the Deployment back with
+`kubectl apply -f k8s/vllm-deployment.yaml`.
+
 ## The three runs
 
 Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.

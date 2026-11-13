@@ -41,9 +41,10 @@ def main():
     ap.add_argument("--label", required=True, help="result folder name, for example baseline")
     ap.add_argument("--results-dir", default=str(HERE / "results"))
     ap.add_argument("--timeout", type=float, default=120)
+    ap.add_argument("--prompts", default="quality_prompts.json", help="file in bench/prompts")
     args = ap.parse_args()
 
-    prompts = json.loads((HERE / "prompts" / "quality_prompts.json").read_text())
+    prompts = json.loads((HERE / "prompts" / args.prompts).read_text())
     rows = []
     for item in prompts:
         answer = ask(args.base_url, args.model, item["prompt"], args.timeout)
@@ -57,6 +58,8 @@ def main():
 
     for lang in ("en", "th"):
         group = [r for r in rows if r["lang"] == lang]
+        if not group:
+            continue
         print(f"{lang}: {sum(r['pass'] for r in group)}/{len(group)} passed")
     sys.exit(0 if all(r["pass"] for r in rows) else 1)
 
