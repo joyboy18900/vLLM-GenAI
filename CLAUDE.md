@@ -23,15 +23,17 @@ A practice project for **LLM serving infrastructure**, end to end. The product i
 
 The CPU has no integrated graphics. The desktop display also uses the RTX 4070 SUPER, so some VRAM is not available to vLLM.
 
-**Approximate VRAM budget** (everything on one 12GB RTX 4070 SUPER):
+**Measured VRAM budget** (Qwen2.5-3B-Instruct fp16 on one 12GB RTX 4070 SUPER, vLLM v0.28.0, `--gpu-memory-utilization=0.85`, max-model-len 8192, measured on WSL2 on 2026-11-13, see `docs/benchmarks.md`):
 
 | Part | VRAM |
 |---|---|
-| Qwen2.5-3B-Instruct (fp16) | ~6GB |
-| KV cache + batching headroom | ~2-3GB |
-| Desktop display | ~0.5-1GB |
+| Qwen2.5-3B-Instruct (fp16) weights | 5.79 GiB |
+| KV cache + batching headroom | 2.97 GiB on the first start (86,560 tokens, 10.57x concurrency), up to 3.97 GiB when the compile cache exists (115,632 tokens, 14.12x) |
+| Desktop display | 0.8 to 1.2 GiB (Windows desktop under WSL2) |
 | faster-whisper (STT) | 0 (CPU only, no GPU) |
 | Piper (TTS) | 0 (CPU only, no GPU) |
+
+In total about 10.8 GiB of 12 GiB is in use when vLLM is idle. vLLM saw only 10.79 GiB free at every start, so a utilization of 0.92 does not start. AWQ (Qwen2.5-3B-Instruct-AWQ) needs 1.95 GiB for the weights and leaves 6.89 GiB of KV cache.
 
 **Main constraint**: there is one GPU only. Serving and retraining must share the same GPU. The retraining job (Sunday 02:00) must scale down the serving pod while it trains (see Key Design Decision 6).
 
