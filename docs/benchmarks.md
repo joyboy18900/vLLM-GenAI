@@ -278,7 +278,23 @@ AWQ is the largest gain (+124% out tok/s of `chat` at concurrency 16), but 4 of 
 
 ## Voice (ticket 06)
 
-Not measured yet. The time from the end of speech to the first audio.
+Measured on 2026-11-13 on WSL2 with `bench/voice_latency.py` (inside the vLLM pod, with the final
+flags, STT `small.en` on CPU, TTS Piper on CPU). It follows the voice mode: STT, then the LLM answer
+until the end of its first sentence, then TTS of that sentence. 4 short English questions, 5 runs each
+after a warm-up. There is no microphone in the test, so the time to detect the end of speech is not in the numbers.
+
+| Step | p50 (s) | max (s) |
+|---|---|---|
+| STT | 1.08 | 1.19 |
+| LLM, first token | 0.05 | 0.32 |
+| LLM, first sentence | 0.25 | 0.81 |
+| TTS of the first sentence | 1.57 | 3.83 |
+| Total, end of speech to first audio | 2.85 | 5.76 |
+
+The GPU part (the LLM) is about 0.25 s of 2.85 s. The two CPU steps are the cost: STT 1.08 s and TTS
+1.57 s. The TTS server returns the whole file, so a long first sentence makes the wait longer (max 3.83 s). The
+real wait in the browser is longer, because it adds the pause that detects the end of speech. This
+is not measured. Not tested: voice mode in the browser, and the overlap between sentences.
 
 ## Thai TTS (ticket 18, bonus)
 

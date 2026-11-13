@@ -138,7 +138,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | `k8s/ingress/` | HTTPS Ingress for Open WebUI and Grafana |
 | `speech/stt/`, `speech/tts/` | The faster-whisper (STT) and Piper (TTS) servers |
 | `vllm/` | Dockerfile of the vLLM image (it mounts the adapter folder) |
-| `bench/` | Benchmark harness, lever script, quality check, dashboard generator, smoke test |
+| `bench/` | Benchmark harness, lever script, quality check, voice latency script, dashboard generator, smoke test |
 | `docs/` | `GUIDE.md`, `setup.md`, `benchmarks.md`, `workflow.png` (made with ChatGPT), `workflow.svg` (the same system drawn as code) |
 | `.scratch/` | The spec and the tickets of this project |
 
