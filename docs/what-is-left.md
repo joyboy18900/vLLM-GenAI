@@ -16,8 +16,11 @@ On the PC, in k3s, at the time of the stop:
 - The monitoring pods run (checked on 2026-11-13): all 7 Prometheus targets are up, DCGM works on
   WSL2, and the alert test passed. `node-exporter` needs `mount --make-rshared /` as root in WSL2
   after each boot of WSL2. Not looked at yet: the dashboard panels in the browser.
-- The copy of the project on the PC equals the repository (commit `7a09a4e`). It has one file that is
-  not tracked: `docs/diagram-prompt.md`.
+- The benchmark ran on 2026-11-13 (6 of 9 configurations, see `docs/benchmarks.md`). The Deployment
+  is back to the arguments of `k8s/vllm-deployment.yaml`. The raw results are in `bench/results/` (it is
+  not in git) on the PC copy and on the Mac.
+- The copy of the project on the PC is the repository of the last send, not the newest commits. It has
+  one file that is not tracked: `docs/diagram-prompt.md`.
 - The SSH server and the firewall rule for it are still enabled on the PC.
 
 ## The three runs
@@ -26,13 +29,15 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 
 1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods, the Open WebUI pod, and vLLM
    with Qwen2.5-3B-Instruct on k3s (VRAM and KV cache, start, a chat through the Service, a restart
-   without a new download) and the monitoring pods. Left: vLLM standalone (ticket 02), the dashboard
-   panels in the browser, chat and voice in the browser, the benchmark and the configurations in
-   `bench/levers.py` (to choose the final vLLM flags), and the smoke test. Before you start, send the
+   without a new download), vLLM standalone (ticket 02), the monitoring pods, and the benchmark of 6
+   configurations. Left: the choice of the final vLLM flags (open questions: keep n-gram decoding, AWQ,
+   and a lower utilization for the three configurations that need 0.92), the dashboard panels in the
+   browser, chat and voice in the browser, and the smoke test. Before you start, send the
    project to the PC again if the repository changed (see "Get the code into WSL2 without a push" in
    `docs/setup.md`).
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
-   cannot: DCGM, the HTTPS Ingress, and the NodePort. Fill the PC spec table again.
+   cannot: the HTTPS Ingress and the NodePort. Check that the model runner V2 works there (on WSL2 it
+   stops with "UVA is not available", see `docs/setup.md`, "Benchmark harness"). Fill the PC spec table again.
 3. **EC2.** Repeat the run on a rented GPU machine. It is the backup when the PC is not ready. Check
    the differences in "If you run on EC2" (fp8 and bf16 support, VRAM, quota, cost).
 
