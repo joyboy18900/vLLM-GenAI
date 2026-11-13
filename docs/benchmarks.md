@@ -238,6 +238,27 @@ What the numbers show:
   applies. This can lower the accept rate. It is not tested with `--temperature=0`.
 - Each run is one run. The prompts are 82 to 129 words, so the history is short.
 
+### Summarize a text (workload `summarize`)
+
+The case that n-gram decoding is made for: the answer copies words of the prompt. The file is
+`bench/prompts/summarize_prompts.jsonl` (5 prompts, each "Summarize the following text in five short
+bullet points" and a text of 411 to 460 words, cut from `docs/GUIDE.md` and `CLAUDE.md`). The run uses
+`--temperature 0`. Run with `WORKLOADS=summarize bench/run.sh <label>`. Each configuration ran once.
+
+| config | conc | TTFT p50 (ms) | TPOT p50 (ms) | out tok/s | done | failed |
+|---|---|---|---|---|---|---|
+| `baseline` | 1 | 23.1 | 14.4 | 68.7 | 24 | 0 |
+| `spec_ngram` | 1 | 23.0 | 12.6 | 79.0 | 24 | 0 |
+| `baseline` | 8 | 50.2 | 14.9 | 523.9 | 96 | 0 |
+| `spec_ngram` | 8 | 40.9 | 15.7 | 495.3 | 96 | 0 |
+| `baseline` | 16 | 55.1 | 15.5 | 1003.7 | 160 | 0 |
+| `spec_ngram` | 16 | 46.4 | 17.8 | 861.0 | 160 | 0 |
+
+- At concurrency 1, n-gram helps: out tok/s +15%, TPOT p50 -12%.
+- At concurrency 8 and 16, n-gram costs: out tok/s -5% and -14%.
+- So the gain of n-gram is real but small, and only for one request at a time. The cost grows with the load.
+- The accept rate is not read, so the cause is not measured.
+
 Final choice: `baseline` (fp16, utilization 0.85, max-model-len 8192, max-num-seqs 16, prefix caching), with `VLLM_USE_V2_MODEL_RUNNER=0` on WSL2. The Deployment and the configuration `deployed` use it.
 
 Reasons:
@@ -248,8 +269,9 @@ Reasons:
 
 Limits of this choice:
 - The reasons use the numbers at concurrency 16. This project has one user, which is closer to concurrency 1. At concurrency 1, `spec_draft` is +14% and `awq` is +134% faster than `baseline`, and n-gram is 9% slower. The choice of `baseline` stands because it is the simplest and the reference, not because it is the fastest at concurrency 1.
-- The `chat` workload is 28 short single-turn prompts with `--ignore-eos`, and each configuration ran once. The spread between runs is not measured. The multi-turn case (see above) gives the same result for n-gram: no gain.
+- The `chat` workload is 28 short single-turn prompts with `--ignore-eos`, and each configuration ran once. The spread between runs is not measured. The multi-turn case (see above) gives no gain for n-gram. The summarize case (see above) gives +15% at concurrency 1 and a loss at higher load.
 - It is not known how much of the n-gram cost comes from wrong guesses and how much from the async scheduling that vLLM turns off with n-gram.
+- For one user at a time, n-gram is -9% for `chat`, +1.6% for `multiturn`, and +15% for `summarize`. Choose it only if the product mostly summarizes or quotes text. The chatbot of this project mostly chats.
 - That the source project gets a gain from n-gram because it runs on a T4 is a guess. It is not tested.
 
 AWQ is the largest gain (+124% out tok/s of `chat` at concurrency 16), but 4 of 14 answers differ. It stays an option for multi-instance (see `CLAUDE.md`). `sched`, `kv_fp8`, and `min_latency` are not measured (they need utilization 0.92).

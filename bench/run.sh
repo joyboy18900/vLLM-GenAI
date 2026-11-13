@@ -4,6 +4,8 @@
 #   random   workload A: random tokens, input 512, output 128 (engine only)
 #   chat     workload C: chat text from bench/prompts, output 128
 #   prefix   workload B: shared prefix 1024, input 256, output 128 (prefix caching), concurrency 1 and 8
+#   summarize  workload E: summarize a text of about 450 words (bench/prompts/summarize_prompts.jsonl), output 128,
+#              temperature 0. The answer copies words of the prompt, which is the case for n-gram decoding.
 #   multiturn  workload D: chat with a history of earlier turns (bench/prompts/multiturn_prompts.jsonl), output 128
 # The command runs inside the vLLM pod, so it measures the engine without network noise.
 # The benchmark shares the pod CPU with the server. Do not run other work at the same time.
@@ -20,7 +22,7 @@ MODEL="${MODEL:-Qwen/Qwen2.5-3B-Instruct}"
 SEED="${SEED:-0}"
 WARMUPS="${WARMUPS:-3}"
 CONCURRENCIES="${CONCURRENCIES:-1 8 16}"
-WORKLOADS="${WORKLOADS:-random chat prefix multiturn}"
+WORKLOADS="${WORKLOADS:-random chat prefix multiturn summarize}"
 want() { case " $WORKLOADS " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
 
 nprompts() { # prompts per concurrency level. NUM_PROMPTS overrides all levels.
@@ -41,6 +43,11 @@ print(json.dumps([{"conversations": [{"from": "human", "value": json.loads(l)["p
                                      {"from": "gpt", "value": "-"}]} for l in sys.stdin if l.strip()]))' \
   < "$HERE/prompts/chat_prompts.jsonl" \
   | kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/chat_prompts.json'
+python3 -c 'import json, sys
+print(json.dumps([{"conversations": [{"from": "human", "value": json.loads(l)["prompt"]},
+                                     {"from": "gpt", "value": "-"}]} for l in sys.stdin if l.strip()]))' \
+  < "$HERE/prompts/summarize_prompts.jsonl" \
+  | kubectl exec -i "$POD" -- sh -c 'cat > /tmp/bench-data/summarize_prompts.json'
 # The earlier turns go into one user message as a transcript. The server sees a long prompt that
 # holds text that an answer can copy (n-gram decoding looks for it). The turns are not separate messages.
 python3 -c 'import json, sys
@@ -71,6 +78,9 @@ for c in $CONCURRENCIES; do
   want multiturn && bench multiturn "$c" \
     --dataset-name sharegpt --dataset-path /tmp/bench-data/multiturn_prompts.json --sharegpt-output-len 128 \
     --ignore-eos --backend openai-chat --endpoint /v1/chat/completions
+  want summarize && bench summarize "$c" \
+    --dataset-name sharegpt --dataset-path /tmp/bench-data/summarize_prompts.json --sharegpt-output-len 128 \
+    --ignore-eos --temperature 0 --backend openai-chat --endpoint /v1/chat/completions
   if want prefix; then
     case "$c" in 1|8)
       bench prefix "$c" \
