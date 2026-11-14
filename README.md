@@ -35,8 +35,9 @@ User (type or speak) -> Open WebUI (HTTPS through Traefik, or an SSH tunnel to N
 - **Ingress**: Traefik with HTTPS from a local certificate authority.
 - **Monitoring**: Prometheus, Grafana, Loki, Alertmanager, DCGM exporter, Node Exporter, and
   kube-state-metrics. `/metrics` on vLLM, STT, and TTS. The dashboard is stored as code.
-- The **LLM-D router**, the **feedback pipeline**, and the **weekly retraining** are in the design
-  but not built (see `CLAUDE.md`).
+- The **LLM-D router** (optional): a router in front of two AWQ pods that scales the second pod to zero
+  when it is idle (see `docs/setup.md`, "Router"). The **feedback pipeline** and the **weekly
+  retraining** are in the design but not built (see `CLAUDE.md`).
 
 > To learn how a request moves through the system from the first click to the answer, read
 > [`docs/GUIDE.md`](docs/GUIDE.md).
@@ -167,7 +168,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | Benchmark harness, lever script | Ran on k3s in WSL2 (8 of 11 configurations). The smoke test passed 10 of 10 checks with `--no-https` |
 | Benchmark numbers (latency, throughput, levers) | Measured for `baseline`, `ngram_chunked`, `spec_ngram`, `spec_draft`, `compile`, `awq`, `sched_085`, and `kv_fp8_085`. `sched`, `kv_fp8`, and `min_latency` do not start at utilization 0.92. The final flags are chosen: `baseline` (see `docs/benchmarks.md`) |
 | Thai TTS voice | Planned (bonus). Comparison scripts are written and not run |
-| LLM-D router, scale-to-zero | Planned, not built |
+| LLM-D router, several AWQ pods, scale-to-zero | Ran on k3s in WSL2: the router chooses a pod by queue, KV cache use, and prefix, scales the idle pod to zero, and holds a request for a cold start (45 s). On one GPU it lowers the throughput by about half (see `docs/benchmarks.md`) |
 | Feedback pipeline (Redis Streams) | Planned, not built |
 | Weekly retraining (LoRA and DPO) | Planned, not built |
 

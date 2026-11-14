@@ -353,7 +353,58 @@ image 0.1.1. The idle time was 90 s for the test (the default of the manifest is
 - The router wakes a pod only when no pod is ready. With pod `a` always on, pod `b` does not start
   again by itself under load. Waking by load is out of scope of the spec (see the spec, "Out of Scope").
 
+## Benchmark through the router (router spec, ticket 06)
 
+Measured on WSL2 on 2026-11-14. Two AWQ pods (`a`, `b`, 0.40 each, see "Several AWQ pods on one GPU")
+on the one GPU, with GPU time-slicing. The benchmark client runs inside pod `a`. "Direct" sends the
+requests to pod `a` (`localhost:8000`) and pod `b` is idle. "Router" sends them to the Service
+`router`, which spreads them over `a` and `b`. Workload `chat`, the same prompts and seed as before.
+
+**Direct to pod `a`**
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 13.6 | 24.2 | 6.1 | 6.5 | 161.3 | 1.3 | 24 | 0 |
+| chat | 8 | 29.5 | 47.2 | 6.5 | 7.0 | 1185.7 | 9.3 | 96 | 0 |
+| chat | 16 | 45.8 | 63.2 | 6.8 | 6.9 | 2260.7 | 17.7 | 160 | 0 |
+
+**Through the router**
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 15.2 | 251.7 | 6.2 | 6.2 | 157.2 | 1.2 | 24 | 0 |
+| chat | 8 | 43.8 | 108.8 | 14.3 | 15.2 | 542.1 | 4.2 | 96 | 0 |
+| chat | 16 | 46.2 | 82.4 | 15.5 | 15.9 | 1039.6 | 8.1 | 160 | 0 |
+
+- **The router does not make the system faster on one GPU. It makes it slower.** Out tok/s of `chat`:
+  -3% at concurrency 1, -54% at 8, and -54% at 16. TPOT p50 at concurrency 8 goes from 6.5 ms to 14.3 ms.
+  The router split the work well (157 requests to `a`, 132 to `b`, 0 upstream errors), but both pods
+  use the same GPU. With time-slicing the GPU switches between the two processes, so each pod gets about
+  half of the time and the switching costs extra. A second pod on the same GPU adds no compute.
+- **At concurrency 1 the router costs almost nothing.** TTFT p50 is 15.2 ms against 13.6 ms (the p99 of
+  251.7 ms comes from the first requests, which had no warm cache on that pod).
+- **The `prefix` workload could not run through the router.** All 120 requests failed (0 done). That
+  workload uses `/v1/completions`, and the router proxies `/v1/chat/completions` and `/v1/models` only
+  (a request to `/v1/completions` gets 404). Open WebUI uses the chat route. The prefix result for pod
+  `a` direct is in the raw results (`pool-a-direct`, not in git).
+- **What this means.** The goal of the spec was to see the routing decisions, not a speed gain. The
+  numbers show that on one GPU a second pod costs throughput. The router is worth it only with more than
+  one real GPU.
+
+## Router alerts (router spec, ticket 06)
+
+Tested on WSL2 on 2026-11-14.
+
+| Alert | How it was tested | Result |
+|---|---|---|
+| `RouterNoReadyPod` | both pool Deployments scaled to zero | fired (after the `for: 2m` window), and resolved after the pods came back |
+| `RouterDown` | the router Deployment scaled to zero | fired (after `for: 1m`), and resolved after the router came back |
+
+Two details of the rules: a pod that is gone has no `up` series, so `RouterDown` also reads
+`kube_deployment_status_replicas_available`, and `RouterNoReadyPod` also fires on a missing
+`router_pod_up` series. Both rules fire only when the router exists, so the baseline stack has no extra alert.
+
+## Voice (ticket 06)
 
 Measured on 2026-11-13 on WSL2 with `bench/voice_latency.py` (inside the vLLM pod, with the final
 flags, STT `small.en` on CPU, TTS Piper on CPU). It follows the voice mode: STT, then the LLM answer

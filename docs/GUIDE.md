@@ -212,11 +212,23 @@ Alertmanager <-- alerts from Prometheus rules
 The design in `CLAUDE.md` has more than the system has today. These parts are planned and are not
 built:
 
-- the mock LLM-D router and scale-to-zero
 - the feedback collector with Redis Streams
 - the weekly retraining CronJob (LoRA and DPO) and the hot swap of the adapter
 
 The Thai voice is a bonus for later.
+
+## Part 5b: the router (optional)
+
+With the router, a request does not go to the Service `vllm`. Open WebUI sends it to the Service `router`.
+The router is a small program (FastAPI) in its own pod. It reads the list of vLLM pods from Kubernetes,
+asks each pod for its `/metrics` every 1 to 2 seconds, and gives each pod a score: a bonus when it served
+the same start of a prompt before (its KV cache may hold it), minus the queue, minus the KV cache use. The
+best pod gets the request. The answer has the header `X-Routed-Pod`.
+
+The router also scales the second pod to zero after 600 seconds with no request. When no pod is ready, it
+scales one up and holds the request (up to 120 seconds). The pods share one GPU, so the router does not
+add speed here. It shows how the decisions work. See `docs/setup.md`, "Router", and the row "Router" in
+Grafana.
 
 ## Part 6: how to open the pages
 
