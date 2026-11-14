@@ -33,3 +33,4 @@ bench/out/
 *.pem
 *.key
 *.crt
+.pytest_cache/
