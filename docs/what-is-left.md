@@ -19,8 +19,8 @@ On the PC, in k3s, at the time of the stop:
 - The benchmark ran on 2026-11-13 (8 of 11 configurations, see `docs/benchmarks.md`). The Deployment
   uses the final flags of `k8s/vllm-deployment.yaml`. The raw results are in `bench/results/` (it is
   not in git) on the PC copy and on the Mac.
-- The copy of the project on the PC is the repository of the last send, not the newest commits. It has
-  one file that is not tracked: `docs/diagram-prompt.md`.
+- The copy of the project on the PC has the `bench` and `k8s` folders of the commit `c4ced85` (sent on
+  2026-11-14). The other folders are older. It has one file that is not tracked: `docs/diagram-prompt.md`.
 - The remote access is closed (2026-11-14): the firewall rule is off and `sshd` is stopped. Port 22 of the PC times out from the Mac. The agent sent the commands of step 5 in "Remote access" (`docs/setup.md`) in one call that cut its own session, so it could not read their results. The owner can check on the PC: `Get-Service sshd` shows Stopped and Disabled, and `C:\ProgramData\ssh\administrators_authorized_keys` does not exist.
 
 ## The three runs
@@ -53,7 +53,7 @@ and in `bench/levers.py` (the configuration `deployed` must equal the Deployment
   The text for ChatGPT is in the files `prompt.md` and `architecture.md` on the owner's Desktop.
   They are not in the repository.
 - Thai TTS (bonus): run `bench/thai_tts`, listen, and choose a voice (ticket 18).
-- When the PC runs are over, remove the SSH access (see "Remote access" in `docs/setup.md`).
+- The SSH access is already removed. Before the next run on the PC, turn it on again (see "Remote access" in `docs/setup.md`), and remove it again at the end.
 
 ## What a new session does not know
 
