@@ -688,7 +688,26 @@ Status: ran on WSL2 on 2026-11-14 with the pool of two AWQ pods. The router chos
    The manifest `k8s/open-webui-deployment.yaml` keeps `http://vllm:8000/v1`, so a new deploy of it also
    goes back to the single pod.
 
+### Router metrics, dashboard, and alerts (ticket 06 of the router spec)
 
+- Prometheus has a job `router` (it keeps pods with the label `app=router`). Apply the monitoring folder
+  and restart Prometheus and Grafana after a change:
+  ```bash
+  kubectl apply -f k8s/monitoring/
+  kubectl -n monitoring rollout restart deploy/prometheus deploy/grafana
+  ```
+- The dashboard row "Router" comes from `bench/gen_dash.py` (see "Core monitoring"). The alerts
+  `RouterDown` and `RouterNoReadyPod` are in `k8s/monitoring/50-alert-rules.yaml`.
+- The smoke test checks the router when it exists: `sh bench/smoke_test.sh --no-https` gave 12 of 12
+  checks on 2026-11-14. In router mode the chat check goes through the router.
+- Benchmark through the router (the client runs in pod `a`):
+  ```bash
+  POD_SELECTOR=pool-member=a WORKLOADS=chat bench/run.sh pool-a-direct                              # pod a only
+  POD_SELECTOR=pool-member=a BASE_URL=http://router:8000 WORKLOADS=chat bench/run.sh pool-router    # through the router
+  ```
+  The router proxies the chat route only, so use the workload `chat` (not `random` or `prefix`).
+
+## Full smoke test
 
 Status: the pass and fail logic ran on a Mac with a fake `curl` (all pass gives exit 0, a wrong
 answer gives exit 1). `shellcheck` shows no real warning. The real run is untested.

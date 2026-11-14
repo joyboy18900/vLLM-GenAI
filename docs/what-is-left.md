@@ -44,7 +44,7 @@ Ordered by what it teaches, not by need.
    (`docs/benchmarks.md` has only the combined voice latency and the "Ready" time of each start).
 4. **Things that the spec left out.** Each one needs its own spec first. The design is in `CLAUDE.md`.
    - The LLM-D router, scale-to-zero, and several AWQ pods: the spec and 6 tickets are written in
-     `.scratch/router-llmd/` (spec A, not started). The specs for the feedback pipeline (B) and the
+     `.scratch/router-llmd/` (spec A, built and tested on WSL2 on 2026-11-14). The specs for the feedback pipeline (B) and the
      training (C) are written when their turn comes.
    - The feedback pipeline (Redis Streams), the weekly retraining CronJob, and LoRA with DPO.
 5. **The small items below:** the diagram and the Thai TTS voice.
