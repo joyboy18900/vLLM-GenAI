@@ -337,7 +337,23 @@ then reports `nvidia.com/gpu: 3`. Time-slicing does not split the VRAM. Each pod
 - vLLM prints a line that tells a `--kv-cache-memory` value for a start without a profile. It was not
   used.
 
-## Voice (ticket 06)
+## Scale to zero and cold start through the router (router spec, ticket 05)
+
+Measured on WSL2 on 2026-11-14 with two AWQ pods (`a` always on, `b` can go to zero) and the router
+image 0.1.1. The idle time was 90 s for the test (the default of the manifest is 600 s).
+
+| Test | Result |
+|---|---|
+| Idle pod `b` after 90 s with no request | `b` went from 1 replica to 0, `a` stayed at 1 (`router_scale_events_total{direction="down"}` = 1) |
+| No pod ready, hold limit 5 s | the router scaled `a` up and answered 503 after 5.1 s: `No pod became ready in 5 seconds` |
+| No pod ready, hold limit 120 s | the router scaled `a` up, held the request, and answered 200 from pod `a` after **45.4 s** (`router_cold_start_wait_seconds` sum 46.3 s for 1 request) |
+
+- The cold start of 45 s is in the range of the start times of the proof of concept (51 to 71 s for the
+  fp16 pod). It is shorter, because the AWQ model is smaller and the compile cache already existed.
+- The router wakes a pod only when no pod is ready. With pod `a` always on, pod `b` does not start
+  again by itself under load. Waking by load is out of scope of the spec (see the spec, "Out of Scope").
+
+
 
 Measured on 2026-11-13 on WSL2 with `bench/voice_latency.py` (inside the vLLM pod, with the final
 flags, STT `small.en` on CPU, TTS Piper on CPU). It follows the voice mode: STT, then the LLM answer

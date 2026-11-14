@@ -669,6 +669,9 @@ Status: ran on WSL2 on 2026-11-14 with the pool of two AWQ pods. The router chos
    kubectl exec deploy/router -- python3 -c "import urllib.request as u; print(u.urlopen('http://localhost:8000/router/stats').read().decode())"
    ```
    Expected: both pods with `"ready":true`.
+   The router also scales pod `b` to zero after 600 s with no request (`ROUTER_IDLE_SECONDS`), and scales
+   a pod up when no pod is ready, holding the request for up to 120 s (`ROUTER_HOLD_SECONDS`). Pod `a`
+   (`ROUTER_ALWAYS_ON`) never goes to zero by the router.
 3. Send Open WebUI to the router:
    ```bash
    kubectl set env deploy/open-webui OPENAI_API_BASE_URL=http://router:8000/v1
