@@ -1,0 +1,96 @@
+# LLM-D router (spec: .scratch/router-llmd/spec.md). It reads the vLLM pods of the pool from the
+# Kubernetes API and sends each request to the best one. Open WebUI uses it when
+# OPENAI_API_BASE_URL is http://router:8000/v1 (see docs/setup.md, "Router").
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: router
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: router
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Scale-to-zero (ticket 05): the router can change the scale of the two pool Deployments only.
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    resourceNames: ["vllm-awq-a", "vllm-awq-b"]
+    verbs: ["get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: router
+subjects:
+  - kind: ServiceAccount
+    name: router
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: router
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: router
+  labels:
+    app: router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: router
+  template:
+    metadata:
+      labels:
+        app: router
+    spec:
+      serviceAccountName: router
+      enableServiceLinks: false
+      containers:
+        - name: router
+          image: genai-router:0.1.0   # built on the PC and imported with "docker save" (no registry)
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: ROUTER_POD_SELECTOR
+              value: pool=awq
+            - name: ROUTER_POLL_SECONDS
+              value: "1.5"
+            # Weights of the score (see router/scoring.py)
+            - name: ROUTER_W_PREFIX
+              value: "3.0"
+            - name: ROUTER_W_QUEUE
+              value: "1.0"
+            - name: ROUTER_W_KV
+              value: "2.0"
+          resources:
+            requests: { cpu: "100m", memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: router
+  labels:
+    app: router
+spec:
+  type: ClusterIP
+  selector:
+    app: router
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

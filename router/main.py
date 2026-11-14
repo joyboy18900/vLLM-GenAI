@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from k8s_client import in_cluster_source
 from proxy import NoReadyPod, RouterCore, StaticPodSource
 from scoring import PREFIX_CHARS, prefix_key, weights_from_env
 
@@ -76,5 +77,10 @@ def app_from_env():
     """Entry point for uvicorn: `uvicorn --factory main:app_from_env`."""
     timeout = float(os.environ.get("ROUTER_UPSTREAM_TIMEOUT", "300"))
     client = httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=5.0))
-    core = RouterCore(StaticPodSource(os.environ.get("ROUTER_PODS", "")), client, weights_from_env(os.environ))
+    if os.environ.get("ROUTER_PODS"):  # a fixed list, for a test outside the cluster
+        source = StaticPodSource(os.environ["ROUTER_PODS"])
+    else:
+        source = in_cluster_source(os.environ.get("ROUTER_POD_SELECTOR", "pool=awq"),
+                                   os.environ.get("ROUTER_NAMESPACE"))
+    core = RouterCore(source, client, weights_from_env(os.environ))
     return create_app(core, poll_seconds=float(os.environ.get("ROUTER_POLL_SECONDS", "1.5")))
