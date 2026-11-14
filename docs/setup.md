@@ -567,7 +567,7 @@ On the Mac, add one line to `/etc/hosts` (needs `sudo`). Use the address of the 
 
 ## Benchmark harness
 
-Status: ran on WSL2 on 2026-11-13 for 8 configurations (all 8 workload and concurrency runs each, no
+Status: ran on WSL2 on 2026-11-13 and 2026-11-14 for 8 configurations (all 8 workload and concurrency runs each, no
 failed request). The run found a bug: the `custom` dataset needs pandas, which the vLLM image does not
 have, so the `chat` workload now uses a `sharegpt` dataset that `bench/run.sh` makes from
 `bench/prompts`. On WSL2 set `VLLM_USE_V2_MODEL_RUNNER=0` for configurations without speculative
