@@ -115,6 +115,22 @@ data:
             action: keep
           - source_labels: [__meta_kubernetes_pod_label_app]
             target_label: app
+      # The LLM-D router (only when it is deployed, see docs/setup.md, "Router")
+      - job_name: router
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [default]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            regex: router
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_container_port_number]
+            regex: "8000"
+            action: keep
+          - source_labels: [__meta_kubernetes_pod_phase]
+            regex: Running
+            action: keep
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

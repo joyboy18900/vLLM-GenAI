@@ -18,10 +18,19 @@ check() { # name, then the command
 }
 
 # ---------------------------------------------------------------- part 1 (in the cluster)
+# With the router deployed (docs/setup.md, "Router") the fp16 pod is at zero, so chat goes through it.
+router_present() { curl -sf -m 5 http://router:8000/health; }
+
 chat_ok() {
+  host=vllm
+  router_present >/dev/null 2>&1 && host=router
   curl -sf -m 120 -H 'Content-Type: application/json' \
     -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"Say hi\"}],\"max_tokens\":32}" \
-    http://vllm:8000/v1/chat/completions | grep -q '"content":"[^"]'
+    "http://$host:8000/v1/chat/completions" | grep -q '"content":"[^"]'
+}
+
+router_has_a_ready_pod() {
+  curl -sf -m 10 http://router:8000/health | grep -q '"ready_pods":[1-9]'
 }
 
 roundtrip_ok() {
@@ -50,6 +59,10 @@ in_cluster() {
   check "Prometheus target up: kube-state-metrics" target_up 'min(up{job="kube-state-metrics"})'
   check "Loki is ready" loki_ready
   check "Alertmanager is ready" alertmanager_ready
+  if router_present >/dev/null 2>&1; then  # the router is optional
+    check "Router has a ready vLLM pod" router_has_a_ready_pod
+    check "Prometheus target up: router" target_up 'min(up{job="router"})'
+  fi
 }
 
 if [ "${1:-}" = "--in-cluster" ]; then

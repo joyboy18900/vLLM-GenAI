@@ -44,3 +44,21 @@ data:
             annotations:
               summary: "vLLM KV cache is above 90 percent"
               description: "New requests wait or get preempted when the KV cache is full."
+
+          - alert: RouterDown
+            expr: up{job="router"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "The router is down"
+              description: "Prometheus cannot scrape the router. Open WebUI cannot reach a vLLM pod."
+
+          - alert: RouterNoReadyPod
+            expr: sum(router_pod_up) == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "The router has no ready vLLM pod"
+              description: "Every pod of the pool is down or not ready. The router answers 503."

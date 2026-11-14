@@ -66,7 +66,7 @@ spec:
     metadata:
       labels: { app: grafana }
       annotations:
-        checksum/dashboard: "serving-v1"   # raise this value when the dashboard changes
+        checksum/dashboard: "serving-v2"   # raise this value when the dashboard changes
     spec:
       enableServiceLinks: false
       securityContext:

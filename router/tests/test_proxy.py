@@ -425,3 +425,30 @@ def test_a_recent_request_keeps_the_pod():
     clock.t = 1101  # more than 600 s
     asyncio.run(core.autoscale_tick())
     assert scale.sets == [("vllm-awq-b", 0)]
+
+
+# gauges for Prometheus
+
+def test_pod_up_and_score_gauges_follow_the_pods():
+    core = build({"a": FakePod(waiting=2), "b": FakePod(metrics_ok=False)})
+    text = TestClient(create_app(core)).get("/metrics").text
+    assert 'router_pod_up{pod="a"} 1.0' in text
+    assert 'router_pod_up{pod="b"} 0.0' in text
+    assert 'router_route_score{pod="a"} -2.0' in text
+
+
+def test_the_series_of_a_pod_that_left_the_list_is_removed():
+    pods = {"a": FakePod(), "b": FakePod()}
+    infos = [PodInfo(name=n, url=f"http://{n}:8000") for n in pods]
+    client = httpx.AsyncClient(transport=make_transport(pods))
+
+    async def source():
+        return list(infos)
+
+    core = RouterCore(source, client, W)
+    asyncio.run(core.refresh())
+    infos.pop()  # pod "b" is gone (scaled to zero)
+    asyncio.run(core.refresh())
+    text = TestClient(create_app(core)).get("/metrics").text
+    assert 'router_pod_up{pod="a"}' in text
+    assert 'router_pod_up{pod="b"}' not in text and 'router_route_score{pod="b"}' not in text

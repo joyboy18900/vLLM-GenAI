@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import AsyncIterator, Optional
 
 import httpx
-from prometheus_client import CollectorRegistry, Counter, Histogram
+from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 
 from scoring import PodState, Weights, choose_pod, parse_vllm_metrics, score
 
@@ -101,6 +101,10 @@ class RouterCore:
         self._cold_wait = Histogram("router_cold_start_wait_seconds",
                                     "Time that a request waited for a pod to start.",
                                     buckets=(1, 5, 10, 20, 30, 45, 60, 90, 120), registry=self.registry)
+        self._pod_up = Gauge("router_pod_up", "1 when the pod is ready, 0 when it is not.", ["pod"],
+                             registry=self.registry)
+        self._score = Gauge("router_route_score", "Score of the pod for a request with no known prefix.",
+                            ["pod"], registry=self.registry)
         if scaler is not None:
             scaler.on_event = lambda d: self._scale_events.labels(d).inc()
 
@@ -133,6 +137,17 @@ class RouterCore:
                     new.last_active = old.last_active
                 self._pods[info.name] = new
         await asyncio.gather(*(self._poll(p) for p in self._pods.values()))
+        self._update_gauges(names)
+
+    def _update_gauges(self, names):
+        for gauge in (self._pod_up, self._score):  # drop the series of pods that left the list
+            for labels in [s.labels["pod"] for m in gauge.collect() for s in m.samples]:
+                if labels not in names:
+                    gauge.remove(labels)
+        for name, pod in self._pods.items():
+            st = pod.state()
+            self._pod_up.labels(name).set(1 if st.ready else 0)
+            self._score.labels(name).set(score(st, "", self._weights))
 
     async def _poll(self, pod):
         try:

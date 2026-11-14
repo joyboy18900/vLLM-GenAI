@@ -164,6 +164,25 @@ ts("STT latency", quantiles("stt_request_duration_seconds", label_filter=""), 8,
 ts("TTS latency", quantiles("tts_request_duration_seconds", label_filter=""), 16, w=8, unit="s")
 end_line()
 
+# ---------------------------------------------------------------- router
+row("Router (LLM-D mock)")
+ts("Requests by pod", [
+    ('sum by (pod) (rate(router_requests_total[$__rate_interval]))', "{{pod}}"),
+], 0, w=6, unit="reqps", desc="Where the router sent the requests. Both pods should get some when the load is high.")
+ts("Pod up and score", [
+    ('router_pod_up', "up {{pod}}"),
+    ('router_route_score', "score {{pod}}"),
+], 6, w=6, desc="up is 1 for a ready pod. The score is for a request with no known prefix (higher is better).")
+ts("Cold start wait", [
+    ('histogram_quantile(0.5, sum by (le) (rate(router_cold_start_wait_seconds_bucket[10m])))', "p50"),
+    ('histogram_quantile(0.95, sum by (le) (rate(router_cold_start_wait_seconds_bucket[10m])))', "p95"),
+], 12, w=6, unit="s", desc="How long a request waited for a pod to start (scale from zero).")
+ts("Scale events and errors", [
+    ('sum by (direction) (increase(router_scale_events_total[$__rate_interval]))', "scale {{direction}}"),
+    ('sum(rate(router_upstream_errors_total[$__rate_interval]))', "upstream errors/s"),
+], 18, w=6)
+end_line()
+
 dashboard = {
     "id": None, "uid": "vllm-serving", "title": "vLLM Serving - SLO, KV cache, GPU",
     "tags": ["vllm", "gpu", "serving"], "timezone": "browser", "schemaVersion": 39,

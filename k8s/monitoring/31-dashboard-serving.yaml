@@ -1534,6 +1534,258 @@ data:
               }
             }
           ]
+        },
+        {
+          "id": 31,
+          "type": "row",
+          "title": "Router (LLM-D mock)",
+          "collapsed": false,
+          "gridPos": {
+            "x": 0,
+            "y": 77,
+            "w": 24,
+            "h": 1
+          },
+          "panels": []
+        },
+        {
+          "id": 32,
+          "type": "timeseries",
+          "title": "Requests by pod",
+          "description": "Where the router sent the requests. Both pods should get some when the load is high.",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 78,
+            "w": 6,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "reqps",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 12,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (pod) (rate(router_requests_total[$__rate_interval]))",
+              "legendFormat": "{{pod}}",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ]
+        },
+        {
+          "id": 33,
+          "type": "timeseries",
+          "title": "Pod up and score",
+          "description": "up is 1 for a ready pod. The score is for a request with no known prefix (higher is better).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 6,
+            "y": 78,
+            "w": 6,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 12,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "router_pod_up",
+              "legendFormat": "up {{pod}}",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "router_route_score",
+              "legendFormat": "score {{pod}}",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ]
+        },
+        {
+          "id": 34,
+          "type": "timeseries",
+          "title": "Cold start wait",
+          "description": "How long a request waited for a pod to start (scale from zero).",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 12,
+            "y": 78,
+            "w": 6,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 12,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.5, sum by (le) (rate(router_cold_start_wait_seconds_bucket[10m])))",
+              "legendFormat": "p50",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(router_cold_start_wait_seconds_bucket[10m])))",
+              "legendFormat": "p95",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ]
+        },
+        {
+          "id": 35,
+          "type": "timeseries",
+          "title": "Scale events and errors",
+          "description": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "gridPos": {
+            "x": 18,
+            "y": 78,
+            "w": 6,
+            "h": 8
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short",
+              "custom": {
+                "drawStyle": "line",
+                "lineWidth": 1,
+                "fillOpacity": 12,
+                "showPoints": "never",
+                "spanNulls": true,
+                "stacking": {
+                  "mode": "none",
+                  "group": "A"
+                }
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (direction) (increase(router_scale_events_total[$__rate_interval]))",
+              "legendFormat": "scale {{direction}}",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(router_upstream_errors_total[$__rate_interval]))",
+              "legendFormat": "upstream errors/s",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              }
+            }
+          ]
         }
       ]
     }

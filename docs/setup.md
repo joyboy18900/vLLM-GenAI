@@ -657,8 +657,8 @@ Status: ran on WSL2 on 2026-11-14 with the pool of two AWQ pods. The router chos
 
 1. Build the image on the PC and import it into k3s (no registry), like the speech images:
    ```bash
-   docker build -t genai-router:0.1.1 router
-   docker save genai-router:0.1.1 | k3s ctr images import -
+   docker build -t genai-router:0.1.2 router
+   docker save genai-router:0.1.2 | k3s ctr images import -
    ```
 2. Start the pool (see "AWQ pod pool for the router": the fp16 pod at zero, pods `a` and `b` ready),
    then apply the router. The manifest has a ServiceAccount, a Role (read pods, and change the scale of

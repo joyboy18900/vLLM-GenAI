@@ -53,7 +53,7 @@ spec:
       enableServiceLinks: false
       containers:
         - name: router
-          image: genai-router:0.1.1   # built on the PC and imported with "docker save" (no registry)
+          image: genai-router:0.1.2   # built on the PC and imported with "docker save" (no registry)
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
