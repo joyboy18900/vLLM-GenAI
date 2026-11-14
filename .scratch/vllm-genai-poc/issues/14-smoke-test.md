@@ -6,12 +6,12 @@
 
 **Status:** ready-for-agent
 
-**Test status:** ran on k3s in WSL2 on 2026-11-13 with `--no-https`: all 10 checks passed (first with the earlier flags, then again with the final flags of ticket 13). The HTTPS checks are not run (no Ingress on WSL2). The pass and fail logic ran with a fake `curl` on a Mac. The script is in `bench/smoke_test.sh` (no new top-level folder).
+**Test status:** ran on k3s in WSL2 on 2026-11-13 with `--no-https`: all 10 checks passed (first with the earlier flags, then again with the final flags of ticket 13). The HTTPS checks are not run (no Ingress on WSL2). The pass and fail logic ran with a fake `curl` on a Mac. The script is in `bench/smoke_test.sh` (no new top-level folder). On 2026-11-14 the owner asked to tick boxes that the documents prove. These boxes were ticked from the documents and the manifests, not checked again on the PC (the remote access was already closed): the exit code box (checked with a fake `curl` on a Mac) and the runbook box (the README has a "Smoke test" section).
 
 - [x] vLLM chat completion returns a non-empty answer
 - [x] TTS to STT round trip returns "hello world"
 - [ ] Open WebUI and Grafana answer over HTTPS through the Ingress
 - [x] Prometheus reports vLLM, STT, TTS, DCGM, Node Exporter, and kube-state-metrics targets as up
 - [x] Loki and Alertmanager report ready
-- [ ] The script exits non-zero when any check fails
-- [ ] The setup runbook and README draft notes say how to run it
+- [x] The script exits non-zero when any check fails
+- [x] The setup runbook and README draft notes say how to run it

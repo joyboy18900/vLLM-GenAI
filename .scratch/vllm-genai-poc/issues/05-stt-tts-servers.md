@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** servers tested in Docker on a Mac (arm64). On WSL2 (2026-11-08) the k3s deploy passed: pods ready, PVCs bound, round trip in the cluster returned "Hello World!", `/metrics` reachable. Two boxes ticked earlier stay as they are. The other boxes wait for Ubuntu or EC2.
+**Test status:** servers tested in Docker on a Mac (arm64). On WSL2 (2026-11-08) the k3s deploy passed: pods ready, PVCs bound, round trip in the cluster returned "Hello World!", `/metrics` reachable. Two boxes ticked earlier stay as they are. The other boxes wait for Ubuntu or EC2. On 2026-11-14 the owner asked to tick boxes that the documents prove. These boxes were ticked from the documents and the manifests, not checked again on the PC (the remote access was already closed): the runbook box (`docs/setup.md`, section "Speech servers").
 
 - [x] STT server: `/v1/audio/transcriptions` and `/health`, faster-whisper on CPU (English model, int8, greedy decoding, fixed language, VAD filter, no previous-text conditioning), settings from environment variables
 - [x] TTS server: `/v1/audio/speech` and `/health`, Piper on CPU, English voice, no trailing sentence silence, serialized synthesis
@@ -14,7 +14,7 @@
 - [x] Deployments with no GPU request, and ClusterIP Services named `stt` and `tts`
 - [x] Model and voice files on a PersistentVolumeClaim
 - [x] Round trip: TTS output for "hello world" sent to STT returns text that contains "hello world"
-- [ ] The setup runbook has the build, deploy, and round-trip steps
+- [x] The setup runbook has the build, deploy, and round-trip steps
 
 **Notes**
 - Round trip in Docker on the Mac: TTS made speech for "hello world", STT returned `Hello World!`.
