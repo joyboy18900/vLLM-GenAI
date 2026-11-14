@@ -46,7 +46,8 @@ data:
               description: "New requests wait or get preempted when the KV cache is full."
 
           - alert: RouterDown
-            expr: up{job="router"} == 0
+            # A pod that is gone has no "up" series, so the replicas of the Deployment count too.
+            expr: up{job="router"} == 0 or kube_deployment_status_replicas_available{namespace="default",deployment="router"} == 0
             for: 1m
             labels:
               severity: critical
@@ -55,7 +56,8 @@ data:
               description: "Prometheus cannot scrape the router. Open WebUI cannot reach a vLLM pod."
 
           - alert: RouterNoReadyPod
-            expr: sum(router_pod_up) == 0
+            # No series at all (every pod is gone) counts too, but only when the router itself is up.
+            expr: (sum(router_pod_up) == 0 or absent(router_pod_up)) and on() (up{job="router"} == 1)
             for: 2m
             labels:
               severity: critical

@@ -31,7 +31,10 @@ nprompts() { # prompts per concurrency level. NUM_PROMPTS overrides all levels.
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 OUT="$HERE/results/$LABEL"
-POD="$(kubectl get pod -l app=vllm -o jsonpath='{.items[0].metadata.name}')"
+# BASE_URL and POD_SELECTOR let you test through the router (docs/setup.md, "Router"):
+#   POD_SELECTOR=pool-member=a BASE_URL=http://router:8000 bench/run.sh router
+POD="$(kubectl get pod -l "${POD_SELECTOR:-app=vllm}" -o jsonpath='{.items[0].metadata.name}')"
+BASE_URL="${BASE_URL:-http://localhost:8000}"
 REMOTE="/tmp/bench/$LABEL"
 
 echo "pod: $POD  label: $LABEL"
@@ -61,7 +64,7 @@ print(json.dumps([{"conversations": [{"from": "human", "value": flat(json.loads(
 bench() { # name, concurrency, then the workload flags
   local name="$1" c="$2"; shift 2
   kubectl exec "$POD" -- vllm bench serve \
-    --base-url http://localhost:8000 --model "$MODEL" --tokenizer "$MODEL" \
+    --base-url "$BASE_URL" --model "$MODEL" --tokenizer "$MODEL" \
     --seed "$SEED" --num-warmups "$WARMUPS" \
     --max-concurrency "$c" --num-prompts "${NUM_PROMPTS:-$(nprompts "$c")}" \
     --percentile-metrics ttft,tpot,itl,e2el --metric-percentiles 50,99 \
