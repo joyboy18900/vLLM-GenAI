@@ -1,13 +1,29 @@
 # NVIDIA RuntimeClass and device plugin.
 # The DaemonSet is based on the static manifest of NVIDIA/k8s-device-plugin v0.20.1
 # (Apache-2.0). We added runtimeClassName: nvidia, because k3s does not use the
-# NVIDIA runtime by default.
+# NVIDIA runtime by default, and time-slicing (below), so that the pods of the AWQ pool can
+# each request one "GPU" while they share the one real GPU. Time-slicing does not split the
+# VRAM. Each vLLM pod sets its own share with --gpu-memory-utilization.
 ---
 apiVersion: node.k8s.io/v1
 kind: RuntimeClass
 metadata:
   name: nvidia
 handler: nvidia
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nvidia-device-plugin-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    version: v1
+    sharing:
+      timeSlicing:
+        resources:
+          - name: nvidia.com/gpu
+            replicas: 3
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -37,6 +53,8 @@ spec:
           env:
             - name: FAIL_ON_INIT_ERROR
               value: "false"
+            - name: CONFIG_FILE
+              value: /config/config.yaml
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -44,7 +62,12 @@ spec:
           volumeMounts:
             - name: kubelet-device-plugins-dir
               mountPath: /var/lib/kubelet/device-plugins
+            - name: plugin-config
+              mountPath: /config
       volumes:
+        - name: plugin-config
+          configMap:
+            name: nvidia-device-plugin-config
         - name: kubelet-device-plugins-dir
           hostPath:
             path: /var/lib/kubelet/device-plugins

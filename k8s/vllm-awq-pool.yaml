@@ -1,0 +1,196 @@
+# Pool of AWQ vLLM pods for the router (spec: .scratch/router-llmd/spec.md).
+# Both pods share the one GPU, so each has a share of --gpu-memory-utilization (see docs/benchmarks.md).
+# They have the label app=vllm, so Prometheus scrapes them. The Service "vllm" selects variant=fp16,
+# so it does not send traffic to them. Never run the fp16 pod and this pool at the same time.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-awq-a
+  labels:
+    app: vllm
+    variant: awq
+    pool: awq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm
+      variant: awq
+      pool-member: a
+  strategy:
+    type: Recreate   # one GPU only: the old pod must free its VRAM first
+  template:
+    metadata:
+      labels:
+        app: vllm   # the vllm job of Prometheus keeps pods with this label
+        variant: awq
+        pool: awq
+        pool-member: a
+    spec:
+      runtimeClassName: nvidia
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: vllm
+          image: docker.io/vllm/vllm-openai:v0.28.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - Qwen/Qwen2.5-3B-Instruct-AWQ
+            - --served-model-name=Qwen/Qwen2.5-3B-Instruct
+            - --gpu-memory-utilization=0.40   # the share of one pod; the pods share the GPU
+            - --max-model-len=8192
+            - --max-num-seqs=16
+            - --enable-prefix-caching
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --host=0.0.0.0
+            - --port=8000
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: HF_HOME
+              value: /cache/hf
+            - name: VLLM_CACHE_ROOT
+              value: /cache/vllm
+            - name: TRITON_CACHE_DIR
+              value: /cache/triton
+            - name: TORCHINDUCTOR_CACHE_DIR
+              value: /cache/inductor
+            - name: HF_HUB_OFFLINE
+              value: "0"
+            # WSL2 has no UVA. Remove this on bare-metal Ubuntu after you test it (see docs/setup.md).
+            - name: VLLM_USE_V2_MODEL_RUNNER
+              value: "0"
+            - name: NVIDIA_DISABLE_REQUIRE
+              value: "true"
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          volumeMounts:
+            - name: cache
+              mountPath: /cache
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: vllm-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-awq-b
+  labels:
+    app: vllm
+    variant: awq
+    pool: awq
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: vllm
+      variant: awq
+      pool-member: b
+  strategy:
+    type: Recreate   # one GPU only: the old pod must free its VRAM first
+  template:
+    metadata:
+      labels:
+        app: vllm   # the vllm job of Prometheus keeps pods with this label
+        variant: awq
+        pool: awq
+        pool-member: b
+    spec:
+      runtimeClassName: nvidia
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: vllm
+          image: docker.io/vllm/vllm-openai:v0.28.0
+          imagePullPolicy: IfNotPresent
+          args:
+            - Qwen/Qwen2.5-3B-Instruct-AWQ
+            - --served-model-name=Qwen/Qwen2.5-3B-Instruct
+            - --gpu-memory-utilization=0.40   # the share of one pod; the pods share the GPU
+            - --max-model-len=8192
+            - --max-num-seqs=16
+            - --enable-prefix-caching
+            - --enable-auto-tool-choice
+            - --tool-call-parser=hermes
+            - --host=0.0.0.0
+            - --port=8000
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: HF_HOME
+              value: /cache/hf
+            - name: VLLM_CACHE_ROOT
+              value: /cache/vllm
+            - name: TRITON_CACHE_DIR
+              value: /cache/triton
+            - name: TORCHINDUCTOR_CACHE_DIR
+              value: /cache/inductor
+            - name: HF_HUB_OFFLINE
+              value: "0"
+            # WSL2 has no UVA. Remove this on bare-metal Ubuntu after you test it (see docs/setup.md).
+            - name: VLLM_USE_V2_MODEL_RUNNER
+              value: "0"
+            - name: NVIDIA_DISABLE_REQUIRE
+              value: "true"
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            failureThreshold: 3
+          volumeMounts:
+            - name: cache
+              mountPath: /cache
+            - name: dshm
+              mountPath: /dev/shm
+      volumes:
+        - name: cache
+          persistentVolumeClaim:
+            claimName: vllm-cache
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi

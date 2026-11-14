@@ -8,6 +8,7 @@ spec:
   type: ClusterIP
   selector:
     app: vllm
+    variant: fp16   # the AWQ pool pods have app=vllm too, and they are not behind this Service
   ports:
     - name: http
       port: 8000

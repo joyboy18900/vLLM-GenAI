@@ -625,6 +625,32 @@ configuration does not start, write the error in `docs/benchmarks.md` and go on 
 Choose the best lossless combination. Write the reasons in `docs/benchmarks.md`. Then put the
 final flags in `k8s/vllm-deployment.yaml`, apply it, and run `bench/smoke_test.sh`.
 
+## AWQ pod pool for the router (ticket 01 of the router spec)
+
+Status: ran on WSL2 on 2026-11-14 (numbers in `docs/benchmarks.md`, "Several AWQ pods on one GPU").
+
+1. Turn on GPU time-slicing, so that more than one pod can request `nvidia.com/gpu`. The manifest has
+   a ConfigMap with `replicas: 3`:
+   ```bash
+   kubectl apply -f k8s/nvidia-device-plugin.yaml
+   kubectl -n kube-system rollout status ds/nvidia-device-plugin-daemonset
+   kubectl get node -o jsonpath='{.items[0].status.allocatable.nvidia\.com/gpu}'   # expected: 3
+   ```
+2. Apply the Service (it selects `variant: fp16`, so the AWQ pods are not behind it) and the pool.
+   Scale the fp16 pod to zero first. Never run the fp16 pod and the pool together:
+   ```bash
+   kubectl apply -f k8s/vllm-service.yaml
+   kubectl scale deploy vllm-qwen --replicas=0
+   kubectl apply -f k8s/vllm-awq-pool.yaml          # pod a: 1 replica, pod b: 0
+   kubectl rollout status deploy/vllm-awq-a --timeout=10m
+   kubectl scale deploy vllm-awq-b --replicas=1
+   kubectl rollout status deploy/vllm-awq-b --timeout=10m
+   ```
+3. Check: both pods are `Running`, and `kubectl logs deploy/vllm-awq-a | grep "GPU KV cache size"`
+   shows 72,832 tokens. Start the pods one at a time, because each start measures the free VRAM.
+4. Go back to the single pod: `kubectl scale deploy vllm-awq-a vllm-awq-b --replicas=0`, then
+   `kubectl apply -f k8s/vllm-deployment.yaml`.
+
 ## Full smoke test
 
 Status: the pass and fail logic ran on a Mac with a fake `curl` (all pass gives exit 0, a wrong

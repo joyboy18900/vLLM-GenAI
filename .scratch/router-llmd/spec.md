@@ -77,7 +77,7 @@ project.
   not answer is out of the pool until it answers again.
 - **Pool.** Two Deployments of the AWQ model, `vllm-awq-a` and `vllm-awq-b`, with the same label as the
   `vllm` job of Prometheus, so that Prometheus scrapes them with no change. Each has a share of
-  `--gpu-memory-utilization`. A third pod is tested only after the VRAM is measured. The fp16 `baseline`
+  `--gpu-memory-utilization`. A third pod did not start at 0.29 (ticket 01), so the pool has two pods. The fp16 `baseline`
   pod is not in the pool, because it needs all of the VRAM.
 - **Scale.** Pod `a` stays at one replica. Pod `b` goes to zero replicas after a set idle time (start
   value: 10 minutes). When no ready pod can take a request, the router scales pod `b` to one and holds
@@ -90,6 +90,9 @@ project.
   `router_pod_up{pod}`, `router_cold_start_wait_seconds`, `router_scale_events_total{direction}`,
   `router_upstream_errors_total`. The dashboard row is made by `bench/gen_dash.py`. Alerts: router down,
   no ready pod.
+- **GPU time-slicing.** The node has one `nvidia.com/gpu`, so a second pod stays `Pending`. The device
+  plugin runs with time-slicing (`replicas: 3`, found in ticket 01). The Service `vllm` selects
+  `variant: fp16`, so the pool pods (which have `app: vllm` for Prometheus) are not behind it.
 - **Single GPU rules.** Nothing except the vLLM pods requests the GPU. The pods share the one GPU, so the
   router does not make the system faster. It makes the decisions visible.
 - **Writing rules.** The same as in the proof of concept: English documents, ASD-STE100 style, no em

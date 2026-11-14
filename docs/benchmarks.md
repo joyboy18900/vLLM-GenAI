@@ -309,6 +309,34 @@ Limits of this choice:
 
 AWQ is the largest gain (+124% out tok/s of `chat` at concurrency 16), but 4 of 14 answers differ. It stays an option for multi-instance (see `CLAUDE.md`). `sched`, `kv_fp8`, and `min_latency` are not measured (they need utilization 0.92).
 
+## Several AWQ pods on one GPU (router spec, ticket 01)
+
+Measured on WSL2 on 2026-11-14 with `k8s/vllm-awq-pool.yaml` (Qwen2.5-3B-Instruct-AWQ, max-model-len
+8192, max-num-seqs 16, prefix caching). The fp16 pod was at zero replicas. Each pod started after the
+one before it was ready. The log is in `bench/results/pool-vram/` (not in git).
+
+**Finding before the numbers:** the second pod stayed `Pending` with `Insufficient nvidia.com/gpu`. The
+node had one `nvidia.com/gpu`, and the first pod held it, although the VRAM was free. The fix is
+time-slicing in the NVIDIA device plugin (`replicas: 3` in `k8s/nvidia-device-plugin.yaml`). The node
+then reports `nvidia.com/gpu: 3`. Time-slicing does not split the VRAM. Each pod keeps its own
+`--gpu-memory-utilization`.
+
+| Pods | Utilization of each | Weights each (GiB) | KV cache each (GiB, tokens, concurrency at 8192) | GPU used after the pods (MiB, with 860 MiB of desktop) | Result |
+|---|---|---|---|---|---|
+| 1 (`a`) | 0.40 | 1.95 | 2.29, 72,832, 8.89x | 5837 | ready |
+| 2 (`a`, `b`) | 0.40 | 1.95 | 2.23 to 2.29, 72,832, 8.89x | 10851 | both ready and both answered a chat request |
+| 1 (`a`) | 0.29 | 1.95 | 0.97, 34,416, 4.20x | 4479 | ready |
+| 2 (`a`, `b`) | 0.29 | 1.95 | 0.97, 34,416, 4.20x | 8105 | both ready |
+| 3 (`a`, `b`, `c`) | 0.29 | 1.95 | not started | 8094 | `c` stopped: `ValueError: No available memory for the cache blocks` |
+
+- **Two pods fit.** Each pod at 0.40 uses about 5 GiB (5837 MiB for the first, 5014 MiB more for the
+  second). The total of 10851 MiB leaves about 1.4 GiB of the 12,282 MiB.
+- **A third pod does not start at 0.29.** The cause is not analyzed. Other shares were not tested, so
+  this does not prove that three pods never fit. The router plan uses two pods.
+- The pods have the same KV cache size, so the router can compare them only by load and by prefix.
+- vLLM prints a line that tells a `--kv-cache-memory` value for a start without a profile. It was not
+  used.
+
 ## Voice (ticket 06)
 
 Measured on 2026-11-13 on WSL2 with `bench/voice_latency.py` (inside the vLLM pod, with the final
