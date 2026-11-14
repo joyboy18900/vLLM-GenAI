@@ -23,6 +23,31 @@ On the PC, in k3s, at the time of the stop:
   2026-11-14). The other folders are older. It has one file that is not tracked: `docs/diagram-prompt.md`.
 - The remote access is closed (2026-11-14): the firewall rule is off and `sshd` is stopped. Port 22 of the PC times out from the Mac. The agent sent the commands of step 5 in "Remote access" (`docs/setup.md`) in one call that cut its own session, so it could not read their results. The owner can check on the PC: `Get-Service sshd` shows Stopped and Disabled, and `C:\ProgramData\ssh\administrators_authorized_keys` does not exist.
 
+## Status: stopped here
+
+The proof of concept is closed on 2026-11-14. Everything in the scope of the spec
+(`.scratch/vllm-genai-poc/spec.md`) ran on WSL2 and is recorded. Nothing here is required. The list
+below is for the owner, if the owner wants to learn more. Each item is a free choice.
+
+## Options if you continue
+
+Ordered by what it teaches, not by need.
+
+1. **Run 2 on bare-metal Ubuntu.** The largest gap: HTTPS Ingress (ticket 11), the voice call over
+   HTTPS, and the model runner V2 without `VLLM_USE_V2_MODEL_RUNNER=0`. Also measure again: on bare
+   metal the free VRAM can be higher than 10.79 GiB, so utilization 0.92 and the configurations
+   `sched`, `kv_fp8`, and `min_latency` may start.
+2. **A quality check that can tell AWQ from fp16.** AWQ gives about 2.2 times the throughput of `baseline`
+   (2345.5 against 1047.2 out tok/s at concurrency 16). It was not chosen because the quality sets
+   cannot show a loss (both fail the same Thai facts). A larger set would allow the choice.
+3. **Speech numbers.** The real-time factor of STT and TTS alone, and the cold start as its own table
+   (`docs/benchmarks.md` has only the combined voice latency and the "Ready" time of each start).
+4. **Things that the spec left out.** Each one needs its own spec first. The design is in `CLAUDE.md`.
+   - The LLM-D router and scale-to-zero.
+   - Several AWQ pods and a test of the Kubernetes load balancing.
+   - The feedback pipeline (Redis Streams), the weekly retraining CronJob, and LoRA with DPO.
+5. **The small items below:** the diagram and the Thai TTS voice.
+
 ## The three runs
 
 Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
