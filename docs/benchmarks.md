@@ -107,10 +107,14 @@ uses random tokens, so use it for the engine only.
 | `spec_draft` | 0.85 | 6.73 | 1.88, 40,992, 5.00x | 10560 | 71 | 80.7 / 548.6 / 987.6 | 11.7 | 14/14 | 11/14 |
 | `compile` | 0.85 | 5.79 | 3.97, 115,632, 14.12x | 11607 | 51 | 68.7 / 529.3 / 1028.6 | 14.5 | 14/14 | 11/14 |
 | `awq` | 0.85 | 1.95 | 6.89, 200,736, 24.50x | 10704 | 71 | 165.2 / 1256.2 / 2345.5 | 6.0 | 10/14 | 12/14 |
+| `sched_085` | 0.85 | 5.79 | 103,840 tokens, 25.35x (4,096 per request) | n/a | n/a | 68.4 / 528.4 / 528.2 | 14.6 | 14/14 | 11/14 |
+| `kv_fp8_085` | 0.85 | 5.79 | 183,232 tokens, 44.73x (4,096 per request) | n/a | n/a | 69.0 / 527.4 / 534.0 | 14.4 | 10/14 | 11/14 |
 
 The KV cache of one configuration changes with the start. The first start of a new argument list builds
 the compile cache and leaves less KV cache (see "VRAM" above), and the utilization differs. Compare the
 speed columns, and read the KV cache column only as the size that each start had.
+
+The last two rows (`sched_085`, `kv_fp8_085`) were measured on 2026-11-14 with the workloads `random`, `chat`, and `prefix`. Their VRAM idle and start time were not recorded, and the KV cache is given in tokens and for 4,096 tokens per request (`max-model-len` 4096).
 
 ### Configurations that did not start
 
@@ -124,7 +128,7 @@ vLLM refuses to start when the free VRAM is less than the utilization times the 
 start the free VRAM was 10.79 GiB of 11.99 GiB (8 starts with a log, and the three that stopped). This
 was the same when the desktop used 799 MiB and when it used 1,169 MiB, so the desktop is not the whole
 reason. The cause is not found. A utilization of 0.92 needs 11.03 GiB. These three configurations are
-not measured. A utilization of 0.89 needs 10.67 GiB. It fits by calculation (not tested), with 0.12 GiB
+not measured at 0.92. `sched` and `kv_fp8` were measured at 0.85 as `sched_085` and `kv_fp8_085` (below). A utilization of 0.89 needs 10.67 GiB. It fits by calculation (not tested), with 0.12 GiB
 to spare.
 
 ### What the numbers show
@@ -136,6 +140,8 @@ All values are from the tables on this page. Out tok/s is the output throughput.
 - **A draft model (`spec_draft`) is faster at low concurrency and slower at high concurrency.** Out tok/s of `chat`: +14% at concurrency 1, -6% at 16. It adds 0.94 GiB of weights and leaves 1.88 GiB of KV cache (5.00x concurrency). The answers are the same as the baseline.
 - **`compile` equals the baseline.** Out tok/s of `chat` at concurrency 16: 1028.6 against 1047.2. vLLM v0.28.0 uses the same compile mode by default.
 - **AWQ is the largest change.** Weights 1.95 GiB (fp16: 5.79 GiB). Out tok/s of `chat`: +134% at concurrency 1, +124% at 16. TPOT p50 of `chat` at concurrency 1: 6.0 ms against 14.2 ms. The KV cache is 6.89 GiB (24.50x concurrency). The quantization changes the answers: 4 of 14 answers differ from the baseline.
+- **Scheduler sizing (`sched_085`: `max-num-seqs` 8, `max-model-len` 4096) is not better than the baseline.** Out tok/s of `chat` at concurrency 1 and 8 equal the baseline (68.4 and 528.4 against 70.7 and 539.1). At concurrency 16 the engine can run only 8 requests, so the other 8 wait: TTFT p50 is 1,970 ms (baseline 52 ms) and out tok/s is 528.2 (baseline 1,047.2, -50%). This is the same collapse that the source project saw at concurrency 16 with `max-num-seqs` 8. The answers are the same as the baseline (14 of 14, and the Thai fact set).
+- **fp8 KV cache (`kv_fp8_085`) works on the RTX 4070 SUPER and gives 1.76 times more KV cache.** 183,232 tokens against 103,840 for `sched_085`, which has the same scheduler flags (the source project could not run it on a T4). It gives no speed gain here: out tok/s of `chat` is 69.0 / 527.4 / 534.0, the same as `sched_085`, because the batch limit of 8 is the limit and not the KV cache. The cost is quality: 4 of 14 answers differ from the baseline, and in the Thai fact set the answers to the provinces (76 against 64) and the mountain change. Both sets still fail the same two facts. The pass count is the same as the baseline (11 of 14, 2 of 4). A bigger KV cache has no use for one user, so keep `baseline`.
 - **No request failed and no preemption happened** in any run. At concurrency 16 with `--max-num-seqs 16`, the engine is at its limit, so the TTFT p99 of `random` includes queue time.
 - **Prefix caching:** it is on in every configuration. No configuration turns it off, so its own effect is not measured.
 - **Thai facts (extra check):** 4 harder Thai questions in `bench/prompts/quality_prompts_th_fact.json`, run with `--prompts quality_prompts_th_fact.json` at temperature 0. `baseline` and `awq` both pass 2 of 4 (`awq-thfact` and `baseline-thfact` in `bench/results/`). Both fail the number of provinces (`baseline` answers 64, `awq` answers 54, the right number is 77) and the highest mountain (both answer Doi Suthep, the right answer is Doi Inthanon). Both pass the capital of Japan and the formula of water. So this model is weak on Thai facts in fp16 too, and this set does not separate `awq` from `baseline`. The `awq` answer 54 is the same wrong number that the source project found. Do not read the 12/14 against 11/14 of `awq` as a quality gain.
@@ -208,7 +214,33 @@ All values are from the tables on this page. Out tok/s is the output throughput.
 | random | 8 | 189.5 | 287.4 | 7.1 | 8.8 | 930.0 | 7.3 | 96 | 0 |
 | random | 16 | 66.5 | 519.4 | 7.2 | 12.4 | 1666.9 | 13.0 | 160 | 0 |
 
-Preemptions: `baseline` 0, `ngram_chunked` 0, `spec_ngram` 0, `spec_draft` 0, `compile` 0, `awq` 0. No request failed in any run.
+#### `sched_085`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 23.6 | 40.0 | 14.6 | 14.8 | 68.4 | 0.5 | 24 | 0 |
+| chat | 8 | 47.5 | 54.5 | 14.8 | 15.8 | 528.4 | 4.1 | 96 | 0 |
+| chat | 16 | 1969.6 | 2017.8 | 15.0 | 15.1 | 528.2 | 4.1 | 160 | 0 |
+| prefix | 1 | 38.0 | 55.0 | 14.6 | 15.2 | 67.7 | 0.5 | 24 | 0 |
+| prefix | 8 | 171.4 | 226.4 | 15.4 | 16.5 | 477.6 | 3.7 | 96 | 0 |
+| random | 1 | 58.1 | 61.3 | 14.4 | 15.4 | 67.3 | 0.5 | 24 | 0 |
+| random | 8 | 213.0 | 349.2 | 15.1 | 17.2 | 468.2 | 3.7 | 96 | 0 |
+| random | 16 | 2559.6 | 2806.0 | 16.0 | 18.1 | 443.7 | 3.5 | 160 | 0 |
+
+#### `kv_fp8_085`
+
+| workload | conc | TTFT p50 (ms) | TTFT p99 (ms) | TPOT p50 (ms) | TPOT p99 (ms) | out tok/s | req/s | done | failed |
+|---|---|---|---|---|---|---|---|---|---|
+| chat | 1 | 25.5 | 30.1 | 14.4 | 14.6 | 69.0 | 0.5 | 24 | 0 |
+| chat | 8 | 62.8 | 77.3 | 14.8 | 15.2 | 527.4 | 4.1 | 96 | 0 |
+| chat | 16 | 1949.3 | 1963.4 | 14.8 | 14.9 | 534.0 | 4.2 | 160 | 0 |
+| prefix | 1 | 38.4 | 71.7 | 14.3 | 14.6 | 68.7 | 0.5 | 24 | 0 |
+| prefix | 8 | 175.0 | 214.2 | 15.2 | 16.3 | 483.8 | 3.8 | 96 | 0 |
+| random | 1 | 63.4 | 69.2 | 14.4 | 14.6 | 67.5 | 0.5 | 24 | 0 |
+| random | 8 | 213.2 | 387.5 | 15.3 | 17.4 | 464.7 | 3.6 | 96 | 0 |
+| random | 16 | 1991.4 | 2628.1 | 14.9 | 17.3 | 497.1 | 3.9 | 160 | 0 |
+
+Preemptions (not checked for `sched_085` and `kv_fp8_085`, no request failed in them): `baseline` 0, `ngram_chunked` 0, `spec_ngram` 0, `spec_draft` 0, `compile` 0, `awq` 0. No request failed in any run.
 
 ### Multi-turn chat (workload `multiturn`)
 

@@ -5,7 +5,7 @@ a check command with the expected result.
 
 **Test status:** partly tested. Each section starts with its own status. The GPU node, vLLM
 standalone, vLLM on k3s, the speech pods, the Open WebUI pod, the monitoring, logs, and alerts, and
-the benchmark of 6 configurations ran on the local PC in WSL2 (not on bare-metal Ubuntu or EC2). Parts that ran on a Mac are named in their section (the STT and TTS servers, the
+the benchmark of 8 configurations ran on the local PC in WSL2 (not on bare-metal Ubuntu or EC2). Parts that ran on a Mac are named in their section (the STT and TTS servers, the
 metrics routes, the certificate commands, and the scripts that run on the Mac). Everything else is
 written and not tested. After the full run on Ubuntu or EC2, replace this paragraph with the
 result and fill the PC spec table in the first section.
@@ -567,7 +567,7 @@ On the Mac, add one line to `/etc/hosts` (needs `sudo`). Use the address of the 
 
 ## Benchmark harness
 
-Status: ran on WSL2 on 2026-11-13 for 6 configurations (all 8 workload and concurrency runs each, no
+Status: ran on WSL2 on 2026-11-13 for 8 configurations (all 8 workload and concurrency runs each, no
 failed request). The run found a bug: the `custom` dataset needs pandas, which the vLLM image does not
 have, so the `chat` workload now uses a `sharegpt` dataset that `bench/run.sh` makes from
 `bench/prompts`. On WSL2 set `VLLM_USE_V2_MODEL_RUNNER=0` for configurations without speculative

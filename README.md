@@ -164,8 +164,8 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | vLLM on k3s | Ran on WSL2 with Qwen2.5-3B-Instruct: chat, stream, and a tool call through the Service, and a restart without a new download. VRAM and KV cache are in `docs/benchmarks.md` |
 | Monitoring (Prometheus, Grafana, Loki, Alertmanager, exporters) | Ran on k3s in WSL2: all 7 targets up (DCGM works), vLLM metrics move, Loki returns the logs of the pods, and `TargetDown` fired and resolved. The dashboard panels in Grafana show data |
 | Voice mode in the browser, HTTPS Ingress | Written, not tested |
-| Benchmark harness, lever script | Ran on k3s in WSL2 (6 of 9 configurations). The smoke test passed 10 of 10 checks with `--no-https` |
-| Benchmark numbers (latency, throughput, levers) | Measured for `baseline`, `ngram_chunked`, `spec_ngram`, `spec_draft`, `compile`, and `awq`. `sched`, `kv_fp8`, and `min_latency` do not start at utilization 0.92. The final flags are chosen: `baseline` (see `docs/benchmarks.md`) |
+| Benchmark harness, lever script | Ran on k3s in WSL2 (8 of 11 configurations). The smoke test passed 10 of 10 checks with `--no-https` |
+| Benchmark numbers (latency, throughput, levers) | Measured for `baseline`, `ngram_chunked`, `spec_ngram`, `spec_draft`, `compile`, `awq`, `sched_085`, and `kv_fp8_085`. `sched`, `kv_fp8`, and `min_latency` do not start at utilization 0.92. The final flags are chosen: `baseline` (see `docs/benchmarks.md`) |
 | Thai TTS voice | Planned (bonus). Comparison scripts are written and not run |
 | LLM-D router, scale-to-zero | Planned, not built |
 | Feedback pipeline (Redis Streams) | Planned, not built |

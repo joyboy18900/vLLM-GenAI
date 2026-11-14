@@ -16,20 +16,12 @@ On the PC, in k3s, at the time of the stop:
 - The monitoring pods run (checked on 2026-11-13): all 7 Prometheus targets are up, DCGM works on
   WSL2, and the alert test passed. `node-exporter` needs `mount --make-rshared /` as root in WSL2
   after each boot of WSL2. The dashboard panels were looked at in the browser and show data.
-- The benchmark ran on 2026-11-13 (6 of 9 configurations, see `docs/benchmarks.md`). The Deployment
+- The benchmark ran on 2026-11-13 (8 of 11 configurations, see `docs/benchmarks.md`). The Deployment
   uses the final flags of `k8s/vllm-deployment.yaml`. The raw results are in `bench/results/` (it is
   not in git) on the PC copy and on the Mac.
 - The copy of the project on the PC is the repository of the last send, not the newest commits. It has
   one file that is not tracked: `docs/diagram-prompt.md`.
 - The SSH server and the firewall rule for it are still enabled on the PC.
-
-## Next step when the PC is on again
-
-Run `sched_085` and `kv_fp8_085` (they are in `bench/levers.py`). `kv_fp8` is the one to look at: the
-source project could not run it on a T4, and the RTX 4070 SUPER (Ada) supports it. Each takes about 15
-minutes (`WORKLOADS="random chat prefix" bench/run.sh <label>`, then `bench/quality_check.py`). Then put the
-tables in `docs/benchmarks.md`, tick the two boxes of ticket 13, and set the Deployment back with
-`kubectl apply -f k8s/vllm-deployment.yaml`.
 
 ## The three runs
 
@@ -37,7 +29,7 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
 
 1. **PC, WSL2 (partly done).** Done: the GPU node, the speech pods, the Open WebUI pod, and vLLM
    with Qwen2.5-3B-Instruct on k3s (VRAM and KV cache, start, a chat through the Service, a restart
-   without a new download), vLLM standalone (ticket 02), the monitoring pods, and the benchmark of 6
+   without a new download), vLLM standalone (ticket 02), the monitoring pods, and the benchmark of 8
    configurations. The final flags are chosen (`baseline`, see `docs/benchmarks.md`) and the smoke test passed
    with them (10 of 10, `--no-https`). Chat in the browser and read-aloud work. Left: the microphone and the voice mode in
    the browser (they need a real microphone). Before you start, send the
