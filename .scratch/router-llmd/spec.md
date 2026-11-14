@@ -72,7 +72,7 @@ project.
   `num_requests_running` plus requests that the router has sent and not finished), minus a weight times
   `kv_cache_usage_perc`. The pod with the best score wins. The weights are environment variables. The
   prefix key is a hash of the system prompt and the first characters of the first user message. The
-  number of characters is set in ticket 02.
+  number of characters is 200 (`PREFIX_CHARS` in `router/scoring.py`).
 - **State of the pods.** The router reads `/metrics` of each pod every 1 to 2 seconds. A pod that does
   not answer is out of the pool until it answers again.
 - **Pool.** Two Deployments of the AWQ model, `vllm-awq-a` and `vllm-awq-b`, with the same label as the
