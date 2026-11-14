@@ -651,7 +651,41 @@ Status: ran on WSL2 on 2026-11-14 (numbers in `docs/benchmarks.md`, "Several AWQ
 4. Go back to the single pod: `kubectl scale deploy vllm-awq-a vllm-awq-b --replicas=0`, then
    `kubectl apply -f k8s/vllm-deployment.yaml`.
 
-## Full smoke test
+## Router (ticket 04 of the router spec)
+
+Status: ran on WSL2 on 2026-11-14 with the pool of two AWQ pods. The router chose a pod for chat requests, Open WebUI reached it, and a chat still worked after a pod stopped. A chat in the browser is not tested.
+
+1. Build the image on the PC and import it into k3s (no registry), like the speech images:
+   ```bash
+   docker build -t genai-router:0.1.0 router
+   docker save genai-router:0.1.0 | k3s ctr images import -
+   ```
+2. Start the pool (see "AWQ pod pool for the router": the fp16 pod at zero, pods `a` and `b` ready),
+   then apply the router. The manifest has a ServiceAccount, a Role (read pods, and change the scale of
+   `vllm-awq-a` and `vllm-awq-b` only), a RoleBinding, the Deployment, and the Service `router`:
+   ```bash
+   kubectl apply -f k8s/router-deployment.yaml
+   kubectl rollout status deploy/router
+   kubectl exec deploy/router -- python3 -c "import urllib.request as u; print(u.urlopen('http://localhost:8000/router/stats').read().decode())"
+   ```
+   Expected: both pods with `"ready":true`.
+3. Send Open WebUI to the router:
+   ```bash
+   kubectl set env deploy/open-webui OPENAI_API_BASE_URL=http://router:8000/v1
+   ```
+4. Check: a chat request to `http://router:8000/v1/chat/completions` returns an answer, and the header
+   `X-Routed-Pod` names the pod. After `kubectl scale deploy vllm-awq-a --replicas=0` the router
+   answers through pod `b`, and `/health` shows `ready_pods: 1`.
+5. Way back to the single fp16 pod:
+   ```bash
+   kubectl set env deploy/open-webui OPENAI_API_BASE_URL=http://vllm:8000/v1
+   kubectl scale deploy vllm-awq-a vllm-awq-b --replicas=0
+   kubectl apply -f k8s/vllm-deployment.yaml
+   ```
+   The manifest `k8s/open-webui-deployment.yaml` keeps `http://vllm:8000/v1`, so a new deploy of it also
+   goes back to the single pod.
+
+
 
 Status: the pass and fail logic ran on a Mac with a fake `curl` (all pass gives exit 0, a wrong
 answer gives exit 1). `shellcheck` shows no real warning. The real run is untested.

@@ -54,7 +54,7 @@ spec:
       containers:
         - name: router
           image: genai-router:0.1.0   # built on the PC and imported with "docker save" (no registry)
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8000
