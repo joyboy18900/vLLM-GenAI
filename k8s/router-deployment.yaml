@@ -53,7 +53,7 @@ spec:
       enableServiceLinks: false
       containers:
         - name: router
-          image: genai-router:0.1.0   # built on the PC and imported with "docker save" (no registry)
+          image: genai-router:0.1.1   # built on the PC and imported with "docker save" (no registry)
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -63,6 +63,15 @@ spec:
               value: pool=awq
             - name: ROUTER_POLL_SECONDS
               value: "1.5"
+            # Scale to zero: pool member name = Deployment. Member "a" never goes to zero.
+            - name: ROUTER_MEMBERS
+              value: a=vllm-awq-a,b=vllm-awq-b
+            - name: ROUTER_ALWAYS_ON
+              value: a
+            - name: ROUTER_IDLE_SECONDS
+              value: "600"
+            - name: ROUTER_HOLD_SECONDS
+              value: "120"
             # Weights of the score (see router/scoring.py)
             - name: ROUTER_W_PREFIX
               value: "3.0"

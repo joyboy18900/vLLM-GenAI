@@ -36,3 +36,31 @@ def in_cluster_source(selector, namespace=None, port=8000):
         with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
             namespace = f.read().strip()
     return KubernetesPodSource(client.CoreV1Api(), namespace, selector, port)
+
+
+class KubernetesScaleClient:
+    """Reads and sets the replicas of a Deployment through its scale subresource."""
+
+    def __init__(self, apps_api, namespace):
+        self._api = apps_api
+        self._namespace = namespace
+
+    async def get_replicas(self, deployment):
+        scale = await asyncio.to_thread(self._api.read_namespaced_deployment_scale, deployment, self._namespace)
+        return scale.spec.replicas or 0
+
+    async def set_replicas(self, deployment, replicas):
+        await asyncio.to_thread(self._api.patch_namespaced_deployment_scale, deployment, self._namespace,
+                                {"spec": {"replicas": replicas}})
+
+
+def in_cluster_scale_client(namespace=None):
+    from kubernetes import client, config
+
+    config.load_incluster_config()
+    return KubernetesScaleClient(client.AppsV1Api(), namespace or _own_namespace())
+
+
+def _own_namespace():
+    with open("/var/run/secrets/kubernetes.io/serviceaccount/namespace") as f:
+        return f.read().strip()

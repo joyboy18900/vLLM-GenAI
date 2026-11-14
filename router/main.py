@@ -8,8 +8,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
-from k8s_client import in_cluster_source
+from k8s_client import in_cluster_scale_client, in_cluster_source
 from proxy import NoReadyPod, RouterCore, StaticPodSource
+from scaling import Scaler
 from scoring import PREFIX_CHARS, prefix_key, weights_from_env
 
 
@@ -82,5 +83,12 @@ def app_from_env():
     else:
         source = in_cluster_source(os.environ.get("ROUTER_POD_SELECTOR", "pool=awq"),
                                    os.environ.get("ROUTER_NAMESPACE"))
-    core = RouterCore(source, client, weights_from_env(os.environ))
+    scaler = None
+    members = dict(x.split("=", 1) for x in os.environ.get("ROUTER_MEMBERS", "").split(",") if "=" in x)
+    if members and not os.environ.get("ROUTER_PODS"):
+        scaler = Scaler(in_cluster_scale_client(os.environ.get("ROUTER_NAMESPACE")), members,
+                        always_on=set(filter(None, os.environ.get("ROUTER_ALWAYS_ON", "").split(","))),
+                        idle_seconds=float(os.environ.get("ROUTER_IDLE_SECONDS", "600")))
+    core = RouterCore(source, client, weights_from_env(os.environ), scaler=scaler,
+                      hold_seconds=float(os.environ.get("ROUTER_HOLD_SECONDS", "120")))
     return create_app(core, poll_seconds=float(os.environ.get("ROUTER_POLL_SECONDS", "1.5")))

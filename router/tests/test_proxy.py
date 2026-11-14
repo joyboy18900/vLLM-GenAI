@@ -286,3 +286,142 @@ def test_router_stats_shows_the_state_and_score_of_each_pod():
     assert by["a"]["ready"] is True and by["a"]["waiting"] == 2
     assert by["a"]["score"] == -2.0 and by["b"]["score"] == 0.0
     assert set(by["a"]) >= {"name", "url", "ready", "waiting", "running", "in_flight", "kv_usage", "prefixes", "score"}
+
+
+# scale to zero, hold, and idle scale-down
+
+from scaling import Scaler  # noqa: E402
+
+
+class FakeClock:
+    def __init__(self):
+        self.t = 0.0
+        self.sleeps = 0
+        self.on_sleep = None  # called after each sleep, for a fake pod that starts
+
+    def now(self):
+        return self.t
+
+    async def sleep(self, s):
+        self.t += s
+        self.sleeps += 1
+        if self.on_sleep:
+            self.on_sleep(self.t)
+
+
+class FakeScale:
+    def __init__(self, replicas, on_set=None):
+        self.replicas = dict(replicas)
+        self.sets = []
+        self.on_set = on_set
+
+    async def get_replicas(self, d):
+        return self.replicas[d]
+
+    async def set_replicas(self, d, n):
+        self.sets.append((d, n))
+        self.replicas[d] = n
+        if self.on_set:
+            self.on_set(d, n)
+
+
+def build_scaled(pods, replicas, clock, on_set=None, idle=600, hold=120):
+    infos = [PodInfo(name=n, url=f"http://{n}:8000") for n in pods]
+    client = httpx.AsyncClient(transport=make_transport(pods))
+
+    async def source():
+        return infos
+
+    scale = FakeScale(replicas, on_set)
+    scaler = Scaler(scale, {"a": "vllm-awq-a", "b": "vllm-awq-b"}, always_on={"a"}, idle_seconds=idle)
+    core = RouterCore(source, client, W, scaler=scaler, hold_seconds=hold, clock=clock.now, sleep=clock.sleep)
+    asyncio.run(core.refresh())
+    return core, scale
+
+
+def test_a_request_with_no_ready_pod_wakes_a_pod_and_waits_for_it():
+    pods = {"b": FakePod(metrics_ok=False)}
+    clock = FakeClock()
+    core, scale = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 0}, clock,
+                               on_set=lambda d, n: setattr(clock, "on_sleep",
+                                                           lambda t: setattr(pods["b"], "metrics_ok", t >= 30)))
+    r = post(TestClient(create_app(core)))
+    assert r.status_code == 200 and r.headers["x-routed-pod"] == "b"
+    assert scale.sets == [("vllm-awq-b", 1)]
+    assert clock.t >= 30
+
+
+def test_the_hold_ends_with_a_503_after_the_limit():
+    pods = {"b": FakePod(metrics_ok=False)}
+    clock = FakeClock()
+    core, scale = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 0}, clock, hold=120)
+    r = post(TestClient(create_app(core)))
+    assert r.status_code == 503
+    assert "120" in r.json()["error"]["message"]
+    assert 120 <= clock.t < 130
+
+
+def test_two_requests_in_the_hold_wake_the_pod_once():
+    pods = {"b": FakePod(metrics_ok=False)}
+    clock = FakeClock()
+    core, scale = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 0}, clock,
+                               on_set=lambda d, n: setattr(clock, "on_sleep",
+                                                           lambda t: setattr(pods["b"], "metrics_ok", t >= 10)))
+
+    async def two():
+        r1, r2 = await asyncio.gather(core.chat(body(), "k1"), core.chat(body(), "k2"))
+        return r1, r2
+
+    r1, r2 = asyncio.run(two())
+    assert r1.pod == "b" and r2.pod == "b"
+    assert scale.sets == [("vllm-awq-b", 1)]
+
+
+def test_the_wait_is_counted_in_the_metrics():
+    pods = {"b": FakePod(metrics_ok=False)}
+    clock = FakeClock()
+    core, _ = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 0}, clock,
+                           on_set=lambda d, n: setattr(clock, "on_sleep",
+                                                       lambda t: setattr(pods["b"], "metrics_ok", t >= 5)))
+    c = TestClient(create_app(core))
+    post(c)
+    text = c.get("/metrics").text
+    assert 'router_scale_events_total{direction="up"} 1.0' in text
+    assert "router_cold_start_wait_seconds_count 1.0" in text
+
+
+def test_no_wake_when_a_pod_is_ready():
+    pods = {"a": FakePod(), "b": FakePod(metrics_ok=False)}
+    clock = FakeClock()
+    core, scale = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 0}, clock)
+    assert post(TestClient(create_app(core))).status_code == 200
+    assert scale.sets == []
+
+
+def test_an_idle_pod_is_scaled_down_by_the_tick_and_the_always_on_pod_stays():
+    pods = {"a": FakePod(), "b": FakePod()}
+    clock = FakeClock()
+    core, scale = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 1}, clock, idle=600)
+    clock.t = 601
+    asyncio.run(core.autoscale_tick())
+    assert scale.sets == [("vllm-awq-b", 0)]
+
+
+def test_a_recent_request_keeps_the_pod():
+    pods = {"a": FakePod(), "b": FakePod()}
+    clock = FakeClock()
+    core, scale = build_scaled(pods, {"vllm-awq-a": 1, "vllm-awq-b": 1}, clock, idle=600)
+    clock.t = 500
+    c = TestClient(create_app(core))
+    for _ in range(3):  # fill pod "a", so that "b" gets one request too
+        post(c, content=str(_))
+    pods["a"].waiting = 9
+    asyncio.run(core.refresh())
+    r = post(c, content="to b")
+    assert r.headers["x-routed-pod"] == "b"
+    clock.t = 1000  # 500 s after the last request of "b"
+    asyncio.run(core.autoscale_tick())
+    assert scale.sets == []
+    clock.t = 1101  # more than 600 s
+    asyncio.run(core.autoscale_tick())
+    assert scale.sets == [("vllm-awq-b", 0)]
