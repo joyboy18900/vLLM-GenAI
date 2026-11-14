@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** on 2026-11-13 the live Deployment of Open WebUI had the `AUDIO_*` variables that point to the `stt` and `tts` Services, and `AUDIO_TTS_SPLIT_ON=punctuation`. A read-aloud click in the browser reached the TTS pod (HTTP 200). The time from the end of speech to the first audio was measured with a script (p50 2.85 s, see `docs/benchmarks.md`). The pause that detects the end of speech is not in it, because the test has no microphone. On 2026-11-14 the owner tested the microphone in the browser through the SSH tunnel: it worked, and the STT and TTS pods logged HTTP 200 for the requests of Open WebUI. Not reported: the voice call and the overlap check.
+**Test status:** on 2026-11-13 the live Deployment of Open WebUI had the `AUDIO_*` variables that point to the `stt` and `tts` Services, and `AUDIO_TTS_SPLIT_ON=punctuation`. A read-aloud click in the browser reached the TTS pod (HTTP 200). The time from the end of speech to the first audio was measured with a script (p50 2.85 s, see `docs/benchmarks.md`). The pause that detects the end of speech is not in it, because the test has no microphone. On 2026-11-14 the owner tested the microphone in the browser through the SSH tunnel: it worked, and the STT and TTS pods logged HTTP 200 for the requests of Open WebUI. The owner chose to skip the voice call and the overlap check in run 1. They stay open for run 2.
 
 - [x] Open WebUI audio settings point to the `stt` and `tts` Services through environment variables
 - [x] Sentence-level streaming of TTS turned on

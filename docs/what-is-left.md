@@ -21,7 +21,7 @@ On the PC, in k3s, at the time of the stop:
   not in git) on the PC copy and on the Mac.
 - The copy of the project on the PC is the repository of the last send, not the newest commits. It has
   one file that is not tracked: `docs/diagram-prompt.md`.
-- The SSH server and the firewall rule for it are still enabled on the PC.
+- The remote access is closed (2026-11-14): the firewall rule is off and `sshd` is stopped. Port 22 of the PC times out from the Mac. The agent sent the commands of step 5 in "Remote access" (`docs/setup.md`) in one call that cut its own session, so it could not read their results. The owner can check on the PC: `Get-Service sshd` shows Stopped and Disabled, and `C:\ProgramData\ssh\administrators_authorized_keys` does not exist.
 
 ## The three runs
 
