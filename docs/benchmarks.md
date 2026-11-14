@@ -327,7 +327,7 @@ after a warm-up. There is no microphone in the test, so the time to detect the e
 The GPU part (the LLM) is about 0.25 s of 2.85 s. The two CPU steps are the cost: STT 1.08 s and TTS
 1.57 s. The TTS server returns the whole file, so a long first sentence makes the wait longer (max 3.83 s). The
 real wait in the browser is longer, because it adds the pause that detects the end of speech. This
-is not measured. Not tested: voice mode in the browser, and the overlap between sentences.
+is not measured. The microphone worked in the browser on 2026-11-14 (the STT pod returned HTTP 200 for the speech). Not tested: the voice call, and the overlap between sentences.
 
 ## Thai TTS (ticket 18, bonus)
 

@@ -31,8 +31,8 @@ Each run follows `docs/setup.md` and ends with `sh bench/smoke_test.sh`.
    with Qwen2.5-3B-Instruct on k3s (VRAM and KV cache, start, a chat through the Service, a restart
    without a new download), vLLM standalone (ticket 02), the monitoring pods, and the benchmark of 8
    configurations. The final flags are chosen (`baseline`, see `docs/benchmarks.md`) and the smoke test passed
-   with them (10 of 10, `--no-https`). Chat in the browser and read-aloud work. Left: the microphone and the voice mode in
-   the browser (they need a real microphone). Before you start, send the
+   with them (10 of 10, `--no-https`). Chat in the browser and read-aloud work. The microphone works in the browser (2026-11-14). Left: the voice call
+   and the overlap check (they need a person who listens). Before you start, send the
    project to the PC again if the repository changed (see "Get the code into WSL2 without a push" in
    `docs/setup.md`).
 2. **PC, bare-metal Ubuntu.** Install Ubuntu on the PC, then repeat everything. Also test what WSL2
