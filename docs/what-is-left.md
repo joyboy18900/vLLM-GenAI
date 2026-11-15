@@ -26,7 +26,9 @@ On the PC, in k3s, at the time of the stop:
 ## Status: stopped here
 
 The proof of concept is closed on 2026-11-14. Everything in the scope of the spec
-(`.scratch/vllm-genai-poc/spec.md`) ran on WSL2 and is recorded. Nothing here is required. The list
+(`.scratch/vllm-genai-poc/spec.md`) ran on WSL2 and is recorded. The router (spec A) was added and
+closed on 2026-11-15. The owner decided to stop there: the feedback pipeline (B) and the training (C)
+are not built, and no spec is written for them. Nothing here is required. The list
 below is for the owner, if the owner wants to learn more. Each item is a free choice.
 
 ## Options if you continue
@@ -44,10 +46,16 @@ Ordered by what it teaches, not by need.
    (`docs/benchmarks.md` has only the combined voice latency and the "Ready" time of each start).
 4. **Things that the spec left out.** Each one needs its own spec first. The design is in `CLAUDE.md`.
    - The LLM-D router, scale-to-zero, and several AWQ pods: the spec and 6 tickets are written in
-     `.scratch/router-llmd/` (spec A, built and tested on WSL2 on 2026-11-14). The specs for the feedback pipeline (B) and the
-     training (C) are written when their turn comes.
-   - The feedback pipeline (Redis Streams), the weekly retraining CronJob, and LoRA with DPO.
-5. **The small items below:** the diagram and the Thai TTS voice.
+     `.scratch/router-llmd/` (spec A, built and tested on WSL2 on 2026-11-14). 
+   - The feedback pipeline (Redis Streams), the weekly retraining CronJob, and LoRA with DPO: not
+     built (the owner stopped on 2026-11-15). Each needs a spec first. Open WebUI v0.13.0 keeps the
+     thumbs in its own `feedback` table and has an export route
+     (`GET /api/v1/evaluations/feedbacks/all/export`). Its `WEBHOOK_URL` does not send feedback, so a
+     collector must poll.
+5. **Thai.** The chat model and the speech pods do not handle Thai well (Thai facts: 2 of 4 right, voice
+   is English only). Thai needs a stronger chat model, a multilingual STT model, and a Thai TTS voice
+   (ticket 18).
+6. **The small items below:** the diagram and the Thai TTS voice.
 
 ## The three runs
 
