@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-**Test status:** ran on WSL2 on 2026-11-13. The Loki API returned lines for `{app="vllm"}`, `{app="stt"}`, `{app="tts"}`, and `{app="open-webui"}`. Not ticked: the search in the Explore page of Grafana was not done.
+**Test status:** ran on WSL2 on 2026-11-13. The Loki API returned lines for `{app="vllm"}`, `{app="stt"}`, `{app="tts"}`, and `{app="open-webui"}`. Not ticked: the search in the Explore page of Grafana was not done. On 2026-11-15 the Explore search was handed to the owner (the agent does not sign in to Grafana).
 
 - [x] Loki and a log collector deployed, images pinned, Loki data on a PersistentVolumeClaim with a retention limit
 - [x] Loki added as a Grafana data source by provisioning

@@ -6,13 +6,13 @@
 
 **Status:** ready-for-agent
 
-**Test status:** ran on WSL2 on 2026-11-13 with Qwen2.5-3B-Instruct. The pod became ready, the Service answered from a pod in the cluster (`/v1/models`, chat, stream, tool call), and a restart came back without a new download. `/dev/shm` in the pod is a 2.0G tmpfs. The flags are the final ones of ticket 13 (`baseline`, applied and smoke-tested on 2026-11-13). Not ticked: the startup window (the first download did not fit in 10 minutes, see `docs/setup.md`, "Download the model first"). Numbers are in `docs/benchmarks.md`.
+**Test status:** ran on WSL2 on 2026-11-13 with Qwen2.5-3B-Instruct. The pod became ready, the Service answered from a pod in the cluster (`/v1/models`, chat, stream, tool call), and a restart came back without a new download. `/dev/shm` in the pod is a 2.0G tmpfs. The flags are the final ones of ticket 13 (`baseline`, applied and smoke-tested on 2026-11-13). The probes are in `k8s/vllm-deployment.yaml` (startup window 10 minutes, checked on 2026-11-15). A start with the model in the cache is ready in 51 to 72 s, so the window is long enough for a cold start. The first download can take longer than the window, so the runbook tells the owner to download the model first (`docs/setup.md`, "Download the model first"). Numbers are in `docs/benchmarks.md`.
 
 - [x] Deployment uses the flags chosen in ticket 02, requests one GPU, uses the `nvidia` RuntimeClass and the Recreate strategy
 - [x] Service links disabled on the pod (prevents the `VLLM_PORT` collision)
 - [x] Model and compile caches on a PersistentVolumeClaim (k3s local-path), so a restart does not download again
 - [x] Shared-memory volume mounted
-- [ ] Startup, readiness, and liveness probes on `/health`, with a startup window long enough for a cold start
+- [x] Startup, readiness, and liveness probes on `/health`, with a startup window long enough for a cold start
 - [x] `curl` from a pod in the cluster to the `vllm` Service returns a chat completion
 - [x] A pod restart comes back ready without a new model download
 - [x] The setup runbook has the deploy and check steps
