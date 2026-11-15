@@ -4,7 +4,7 @@ Guidance for Claude Code when it works in this project.
 
 ## Project Overview
 
-A practice project for **LLM serving infrastructure**, end to end. The product is a voice chatbot (type or speak, a ChatGPT-like UI with voice mode). Open WebUI is the frontend. It connects to a backend that simulates the architecture of a production-grade inference platform, with a **continual learning loop** from user feedback.
+A practice project for **LLM serving infrastructure**, end to end. The product is a voice chatbot (type or speak, a chat UI with a voice mode). Open WebUI is the frontend. It connects to a backend that simulates the architecture of a production-grade inference platform, with a **continual learning loop** from user feedback.
 
 **Learning goals.** The goal is not only a chatbot. The goal is to practice:
 - vLLM: workload tuning, KV cache (vLLM manages all of it), GPU memory optimization, quantization (AWQ), LoRA serving

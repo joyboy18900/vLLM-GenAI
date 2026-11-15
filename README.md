@@ -1,7 +1,7 @@
 # vLLM GenAI: LLM Serving Infra (PoC)
 
 A practice project for **LLM serving infrastructure**, end to end. It is a chatbot you can type to
-or speak to, with a ChatGPT-like page and a voice mode. Open WebUI is the frontend. It connects to
+or speak to, with a chat page and a voice mode. Open WebUI is the frontend. It connects to
 a backend that follows the design of a production inference platform.
 
 Everything runs on one machine with one GPU: a local PC with an **NVIDIA RTX 4070 SUPER (12 GB)**.
@@ -140,7 +140,7 @@ Loki, Alertmanager, and the HTTPS pages of Open WebUI and Grafana.
 | `speech/stt/`, `speech/tts/` | The faster-whisper (STT) and Piper (TTS) servers |
 | `vllm/` | Dockerfile of the vLLM image (it mounts the adapter folder) |
 | `bench/` | Benchmark harness, lever script, quality check, voice latency script, dashboard generator, smoke test |
-| `docs/` | `GUIDE.md`, `setup.md`, `benchmarks.md`, `workflow.png` (made with ChatGPT), `workflow.svg` (the same system drawn as code) |
+| `docs/` | `GUIDE.md`, `setup.md`, `benchmarks.md`, `workflow.png` (made with an AI image tool), `workflow.svg` (the same system drawn as code) |
 | `.scratch/` | The spec and the tickets of this project |
 
 ---
